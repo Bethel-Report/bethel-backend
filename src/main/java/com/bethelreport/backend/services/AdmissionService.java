@@ -23,7 +23,7 @@ public class AdmissionService {
     }
 
     if (!Boolean.TRUE.equals(emailVerified)) {
-      return false;
+      return Boolean.TRUE.equals(emailVerified);
     }
 
     return userRepository.findByEmailIgnoreCase(email).filter(User::isActive).isPresent();
