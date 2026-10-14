@@ -36,7 +36,7 @@ public class User {
   private String address;
 
   private boolean volunteer;
-  private boolean masonic_relationship;
+  private boolean masonicRelationship;
   private boolean member;
   private boolean sponsorship;
 
