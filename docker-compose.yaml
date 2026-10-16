@@ -13,14 +13,14 @@ services:
     ports:
       - "8080:8080"
 
-    environment:
-      DATASOURCE_URL: ${DATASOURCE_URL}
-      POSTGRES_USER: ${DATASOURCE_USERNAME}
-      POSTGRES_PASSWORD: ${DATASOURCE_PASSWORD}
-
     depends_on:
       postgres:
         condition: service_healthy
+
+    networks:
+      - net1
+
+
 
   postgres:
     image: postgres:16
@@ -47,5 +47,32 @@ services:
       timeout: 5s
       retries: 10
 
+    networks:
+      - net1
+
+
+
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.3.3
+    container_name: backend-keycloak
+    command: start-dev
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KC_HTTP_ENABLED: "true"
+      KC_HOSTNAME: http://localhost:8081
+    ports:
+      - "8081:8080"
+    volumes:
+      - keycloak_data:/opt/keycloak/data
+    networks:
+      - net1
+
 volumes:
   postgres_data:
+  keycloak_data:
+
+networks:
+  net1:
+    external: true
