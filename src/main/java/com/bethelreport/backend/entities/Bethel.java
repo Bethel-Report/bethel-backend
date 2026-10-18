@@ -9,6 +9,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "bethels")
@@ -37,6 +38,9 @@ public class Bethel {
 
   @Column(name = "sponsoring_lodge", nullable = false)
   private String sponsoringLodge;
+
+  @Column(name = "foundation_date")
+  private LocalDate foundationDate;
 
   @Column(nullable = false)
   private boolean active = true;
