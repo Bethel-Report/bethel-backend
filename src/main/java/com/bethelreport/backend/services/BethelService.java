@@ -18,131 +18,99 @@ import java.util.List;
 @Service
 public class BethelService {
 
-    private final BethelRepository bethelRepository;
+  private final BethelRepository bethelRepository;
 
-    public BethelService(BethelRepository bethelRepository) {
-        this.bethelRepository = bethelRepository;
+  public BethelService(BethelRepository bethelRepository) {
+    this.bethelRepository = bethelRepository;
+  }
+
+  @Transactional
+  public BethelResponse create(CreateBethelRequest request) {
+
+    if (bethelRepository.existsByNumber(request.number())) {
+      throw new ResponseStatusException(HttpStatus.CONFLICT,
+          "Já existe um Bethel cadastrado com este número.");
     }
 
-    @Transactional
-    public BethelResponse create(CreateBethelRequest request) {
+    Bethel bethel = new Bethel();
 
-        if (bethelRepository.existsByNumber(request.number())) {
-            throw new ResponseStatusException(
-                HttpStatus.CONFLICT,
-                "Já existe um Bethel cadastrado com este número."
-            );
-        }
+    updateFields(bethel, request.number(), request.name(), request.foundationDate(), request.city(),
+        request.address(), request.email(), request.sponsoringLodge());
 
-        Bethel bethel = new Bethel();
+    bethel.setActive(true);
 
-        updateFields(
-            bethel,
-            request.number(),
-            request.name(),
-            request.foundationDate(),
-            request.city(),
-            request.address(),
-            request.email(),
-            request.sponsoringLodge()
-        );
+    return BethelResponse.fromEntity(bethelRepository.save(bethel));
+  }
 
-        bethel.setActive(true);
+  @Transactional(readOnly = true)
+  public List<BethelResponse> findAll(String name) {
 
-        return BethelResponse.fromEntity(bethelRepository.save(bethel));
+    List<Bethel> bethels;
+
+    if (name != null && !name.isBlank()) {
+      bethels = bethelRepository.findByNameContainingIgnoreCase(name.trim());
+    } else {
+      bethels = bethelRepository.findAll();
     }
 
-    @Transactional(readOnly = true)
-    public List<BethelResponse> findAll(String name) {
+    return bethels.stream().map(BethelResponse::fromEntity).toList();
+  }
 
-        List<Bethel> bethels;
+  @Transactional(readOnly = true)
+  public BethelResponse findById(Long id) {
+    return BethelResponse.fromEntity(getBethelOrThrow(id));
+  }
 
-        if (name != null && !name.isBlank()) {
-            bethels = bethelRepository.findByNameContainingIgnoreCase(name.trim());
-        } else {
-            bethels = bethelRepository.findAll();
-        }
+  @Transactional
+  public BethelResponse update(Long id, UpdateBethelRequest request) {
 
-        return bethels.stream()
-            .map(BethelResponse::fromEntity)
-            .toList();
+    Bethel bethel = getBethelOrThrow(id);
+
+    if (!bethel.getNumber().equals(request.number())
+        && bethelRepository.existsByNumber(request.number())) {
+      throw new ResponseStatusException(HttpStatus.CONFLICT,
+          "Já existe um Bethel cadastrado com este número.");
     }
 
-    @Transactional(readOnly = true)
-    public BethelResponse findById(Long id) {
-        return BethelResponse.fromEntity(getBethelOrThrow(id));
-    }
+    updateFields(bethel, request.number(), request.name(), request.foundationDate(), request.city(),
+        request.address(), request.email(), request.sponsoringLodge());
 
-    @Transactional
-    public BethelResponse update(Long id, UpdateBethelRequest request) {
+    return BethelResponse.fromEntity(bethelRepository.save(bethel));
+  }
 
-        Bethel bethel = getBethelOrThrow(id);
+  @Transactional
+  public BethelResponse activate(Long id) {
 
-        if (!bethel.getNumber().equals(request.number())
-                && bethelRepository.existsByNumber(request.number())) {
-            throw new ResponseStatusException(
-                HttpStatus.CONFLICT,
-                "Já existe um Bethel cadastrado com este número."
-            );
-        }
+    Bethel bethel = getBethelOrThrow(id);
+    bethel.setActive(true);
 
-        updateFields(
-            bethel,
-            request.number(),
-            request.name(),
-            request.foundationDate(),
-            request.city(),
-            request.address(),
-            request.email(),
-            request.sponsoringLodge()
-        );
+    return BethelResponse.fromEntity(bethelRepository.save(bethel));
+  }
 
-        return BethelResponse.fromEntity(bethelRepository.save(bethel));
-    }
+  @Transactional
+  public BethelResponse deactivate(Long id) {
 
-    @Transactional
-    public BethelResponse activate(Long id) {
+    Bethel bethel = getBethelOrThrow(id);
+    bethel.setActive(false);
 
-        Bethel bethel = getBethelOrThrow(id);
-        bethel.setActive(true);
+    return BethelResponse.fromEntity(bethelRepository.save(bethel));
+  }
 
-        return BethelResponse.fromEntity(bethelRepository.save(bethel));
-    }
+  private Bethel getBethelOrThrow(Long id) {
 
-    @Transactional
-    public BethelResponse deactivate(Long id) {
+    return bethelRepository.findById(id).orElseThrow(
+        () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Bethel não encontrado."));
+  }
 
-        Bethel bethel = getBethelOrThrow(id);
-        bethel.setActive(false);
+  private void updateFields(Bethel bethel, Integer number, String name, LocalDate foundationDate,
+      String city, String address, String email, String sponsoringLodge) {
 
-        return BethelResponse.fromEntity(bethelRepository.save(bethel));
-    }
-
-    private Bethel getBethelOrThrow(Long id) {
-
-        return bethelRepository.findById(id)
-            .orElseThrow(() -> new ResponseStatusException(
-                HttpStatus.NOT_FOUND,
-                "Bethel não encontrado."
-            ));
-    }
-
-    private void updateFields(
-            Bethel bethel,
-            Integer number,
-            String name,
-            LocalDate foundationDate,
-            String city,
-            String address,
-            String email,
-            String sponsoringLodge) {
-
-        bethel.setNumber(number);
-        bethel.setName(name.trim());
-        bethel.setFoundationDate(foundationDate);
-        bethel.setCity(city.trim());
-        bethel.setAddress(address.trim());
-        bethel.setEmail(email.trim());
-        bethel.setSponsoringLodge(sponsoringLodge.trim());
-    }
+    bethel.setNumber(number);
+    bethel.setName(name.trim());
+    bethel.setFoundationDate(foundationDate);
+    bethel.setCity(city.trim());
+    bethel.setAddress(address.trim());
+    bethel.setEmail(email.trim());
+    bethel.setSponsoringLodge(sponsoringLodge.trim());
+  }
 }

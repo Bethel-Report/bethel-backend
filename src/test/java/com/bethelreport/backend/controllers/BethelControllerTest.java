@@ -26,10 +26,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(BethelController.class)
 @Import(SecurityConfig.class)
 class BethelControllerTest {
-  @Autowired MockMvc mvc;
-  @MockitoBean BethelService service;
-  @MockitoBean AdmissionService admissionService;
-  @MockitoBean JwtDecoder jwtDecoder;
+  @Autowired
+  MockMvc mvc;
+  @MockitoBean
+  BethelService service;
+  @MockitoBean
+  AdmissionService admissionService;
+  @MockitoBean
+  JwtDecoder jwtDecoder;
 
   private static final String BASE = "/api/bethels";
 
@@ -42,8 +46,8 @@ class BethelControllerTest {
   }
 
   private BethelResponse response(boolean active) {
-    return new BethelResponse(1L, 12, "Lírios do Vale", LocalDate.of(2020, 5, 10),
-        "Alexandria", "Rua Principal", "bethel@example.com", "Loja União", active);
+    return new BethelResponse(1L, 12, "Lírios do Vale", LocalDate.of(2020, 5, 10), "Alexandria",
+        "Rua Principal", "bethel@example.com", "Loja União", active);
   }
 
   private org.springframework.test.web.servlet.request.RequestPostProcessor admittedJwt() {
@@ -54,28 +58,24 @@ class BethelControllerTest {
   @Test
   void createsBethelWith201() throws Exception {
     when(service.create(any())).thenReturn(response(true));
-    mvc.perform(post(BASE).with(admittedJwt()).contentType(MediaType.APPLICATION_JSON)
-        .content(validJson()))
-        .andExpect(status().isCreated())
-        .andExpect(jsonPath("$.id").value(1))
-        .andExpect(jsonPath("$.number").value(12))
-        .andExpect(jsonPath("$.active").value(true));
+    mvc.perform(
+        post(BASE).with(admittedJwt()).contentType(MediaType.APPLICATION_JSON).content(validJson()))
+        .andExpect(status().isCreated()).andExpect(jsonPath("$.id").value(1))
+        .andExpect(jsonPath("$.number").value(12)).andExpect(jsonPath("$.active").value(true));
     verify(service).create(any());
   }
 
   @Test
   void listsBethels() throws Exception {
     when(service.findAll(null)).thenReturn(List.of(response(true)));
-    mvc.perform(get(BASE).with(admittedJwt()))
-        .andExpect(status().isOk())
+    mvc.perform(get(BASE).with(admittedJwt())).andExpect(status().isOk())
         .andExpect(jsonPath("$[0].number").value(12));
   }
 
   @Test
   void filtersBethelsByName() throws Exception {
     when(service.findAll("Lírios")).thenReturn(List.of(response(true)));
-    mvc.perform(get(BASE).param("name", "Lírios").with(admittedJwt()))
-        .andExpect(status().isOk())
+    mvc.perform(get(BASE).param("name", "Lírios").with(admittedJwt())).andExpect(status().isOk())
         .andExpect(jsonPath("$[0].name").value("Lírios do Vale"));
     verify(service).findAll("Lírios");
   }
@@ -83,50 +83,45 @@ class BethelControllerTest {
   @Test
   void findsBethelById() throws Exception {
     when(service.findById(1L)).thenReturn(response(true));
-    mvc.perform(get(BASE + "/1").with(admittedJwt()))
-        .andExpect(status().isOk())
+    mvc.perform(get(BASE + "/1").with(admittedJwt())).andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value(1));
   }
 
   @Test
   void updatesBethel() throws Exception {
     when(service.update(eq(1L), any())).thenReturn(response(true));
-    mvc.perform(put(BASE + "/1").with(admittedJwt())
-        .contentType(MediaType.APPLICATION_JSON).content(validJson()))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.number").value(12));
+    mvc.perform(put(BASE + "/1").with(admittedJwt()).contentType(MediaType.APPLICATION_JSON)
+        .content(validJson())).andExpect(status().isOk()).andExpect(jsonPath("$.number").value(12));
     verify(service).update(eq(1L), any());
   }
 
   @Test
   void activatesBethel() throws Exception {
     when(service.activate(1L)).thenReturn(response(true));
-    mvc.perform(patch(BASE + "/1/activate").with(admittedJwt()))
-        .andExpect(status().isOk())
+    mvc.perform(patch(BASE + "/1/activate").with(admittedJwt())).andExpect(status().isOk())
         .andExpect(jsonPath("$.active").value(true));
   }
 
   @Test
   void deactivatesBethel() throws Exception {
     when(service.deactivate(1L)).thenReturn(response(false));
-    mvc.perform(patch(BASE + "/1/deactivate").with(admittedJwt()))
-        .andExpect(status().isOk())
+    mvc.perform(patch(BASE + "/1/deactivate").with(admittedJwt())).andExpect(status().isOk())
         .andExpect(jsonPath("$.active").value(false));
   }
 
   @Test
   void rejectsMissingRequiredFieldsOnCreate() throws Exception {
-    mvc.perform(post(BASE).with(admittedJwt()).contentType(MediaType.APPLICATION_JSON)
-        .content("{}"))
+    mvc.perform(
+        post(BASE).with(admittedJwt()).contentType(MediaType.APPLICATION_JSON).content("{}"))
         .andExpect(status().isBadRequest());
     verifyNoInteractions(service);
   }
 
   @Test
   void rejectsInvalidNumberAndEmailOnCreate() throws Exception {
-    mvc.perform(post(BASE).with(admittedJwt()).contentType(MediaType.APPLICATION_JSON)
-        .content(validJson().replace("\"number\":12", "\"number\":0")
-            .replace("bethel@example.com", "invalido")))
+    mvc.perform(
+        post(BASE).with(admittedJwt()).contentType(MediaType.APPLICATION_JSON).content(validJson()
+            .replace("\"number\":12", "\"number\":0").replace("bethel@example.com", "invalido")))
         .andExpect(status().isBadRequest());
     verifyNoInteractions(service);
   }
@@ -141,17 +136,14 @@ class BethelControllerTest {
 
   @Test
   void rejectsBlankRequiredFieldOnUpdate() throws Exception {
-    mvc.perform(put(BASE + "/1").with(admittedJwt())
-        .contentType(MediaType.APPLICATION_JSON)
-        .content(validJson().replace("Lírios do Vale", "  ")))
-        .andExpect(status().isBadRequest());
+    mvc.perform(put(BASE + "/1").with(admittedJwt()).contentType(MediaType.APPLICATION_JSON)
+        .content(validJson().replace("Lírios do Vale", "  "))).andExpect(status().isBadRequest());
     verifyNoInteractions(service);
   }
 
   @Test
   void rejectsInvalidEmailOnUpdate() throws Exception {
-    mvc.perform(put(BASE + "/1").with(admittedJwt())
-        .contentType(MediaType.APPLICATION_JSON)
+    mvc.perform(put(BASE + "/1").with(admittedJwt()).contentType(MediaType.APPLICATION_JSON)
         .content(validJson().replace("bethel@example.com", "invalido")))
         .andExpect(status().isBadRequest());
     verifyNoInteractions(service);
@@ -173,8 +165,8 @@ class BethelControllerTest {
   @Test
   void rejectsNotAdmittedUserOnWrite() throws Exception {
     when(admissionService.admittedUser(any(Jwt.class))).thenReturn(false);
-    mvc.perform(post(BASE).with(jwt()).contentType(MediaType.APPLICATION_JSON)
-        .content(validJson())).andExpect(status().isForbidden());
+    mvc.perform(post(BASE).with(jwt()).contentType(MediaType.APPLICATION_JSON).content(validJson()))
+        .andExpect(status().isForbidden());
     verifyNoInteractions(service);
   }
 }
