@@ -1,19 +1,17 @@
 
 package com.bethelreport.backend.services;
 
+import com.bethelreport.backend.dtos.bethel.BethelResponse;
 import com.bethelreport.backend.dtos.bethel.CreateBethelRequest;
 import com.bethelreport.backend.dtos.bethel.UpdateBethelRequest;
-import com.bethelreport.backend.dtos.bethel.BethelResponse;
 import com.bethelreport.backend.entities.Bethel;
 import com.bethelreport.backend.repositories.BethelRepository;
-
+import java.time.LocalDate;
+import java.util.List;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.http.HttpStatus;
-
-import java.time.LocalDate;
-import java.util.List;
 
 @Service
 public class BethelService {
