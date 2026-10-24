@@ -1,9 +1,9 @@
-package com.bethelreport.backend.controllers;
+package com.bethelreport.backend.bethel.controllers;
 
 import com.bethelreport.backend.config.SecurityConfig;
-import com.bethelreport.backend.dtos.bethel.BethelResponse;
+import com.bethelreport.backend.bethel.dtos.BethelResponse;
+import com.bethelreport.backend.bethel.services.BethelService;
 import com.bethelreport.backend.services.AdmissionService;
-import com.bethelreport.backend.services.BethelService;
 import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.Test;

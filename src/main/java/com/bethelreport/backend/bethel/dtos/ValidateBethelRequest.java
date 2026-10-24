@@ -1,5 +1,4 @@
-
-package com.bethelreport.backend.dtos.bethel;
+package com.bethelreport.backend.bethel.dtos;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
