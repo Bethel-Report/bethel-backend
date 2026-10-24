@@ -52,7 +52,8 @@ class BethelServiceTest {
   private void saveReturnsArgument() {
     when(repository.save(any(Bethel.class))).thenAnswer(inv -> {
       Bethel b = inv.getArgument(0);
-      if (b.getId() == null) b.setId(1L);
+      if (b.getId() == null)
+        b.setId(1L);
       return b;
     });
   }

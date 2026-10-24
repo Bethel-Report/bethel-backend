@@ -17,47 +17,44 @@ import java.util.List;
 @RequestMapping("/api/bethels")
 public class BethelController {
 
-    private final BethelService bethelService;
+  private final BethelService bethelService;
 
-    public BethelController(BethelService bethelService) {
-        this.bethelService = bethelService;
-    }
+  public BethelController(BethelService bethelService) {
+    this.bethelService = bethelService;
+  }
 
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public BethelResponse create(
-            @Valid @RequestBody CreateBethelRequest request) {
+  @PostMapping
+  @ResponseStatus(HttpStatus.CREATED)
+  public BethelResponse create(@Valid @RequestBody CreateBethelRequest request) {
 
-        return bethelService.create(request);
-    }
+    return bethelService.create(request);
+  }
 
-    @GetMapping
-    public List<BethelResponse> findAll(
-            @RequestParam(required = false) String name) {
+  @GetMapping
+  public List<BethelResponse> findAll(@RequestParam(required = false) String name) {
 
-        return bethelService.findAll(name);
-    }
+    return bethelService.findAll(name);
+  }
 
-    @GetMapping("/{id}")
-    public BethelResponse findById(@PathVariable Long id) {
-        return bethelService.findById(id);
-    }
+  @GetMapping("/{id}")
+  public BethelResponse findById(@PathVariable Long id) {
+    return bethelService.findById(id);
+  }
 
-    @PutMapping("/{id}")
-    public BethelResponse update(
-            @PathVariable Long id,
-            @Valid @RequestBody UpdateBethelRequest request) {
+  @PutMapping("/{id}")
+  public BethelResponse update(@PathVariable Long id,
+      @Valid @RequestBody UpdateBethelRequest request) {
 
-        return bethelService.update(id, request);
-    }
+    return bethelService.update(id, request);
+  }
 
-    @PatchMapping("/{id}/activate")
-    public BethelResponse activate(@PathVariable Long id) {
-        return bethelService.activate(id);
-    }
+  @PatchMapping("/{id}/activate")
+  public BethelResponse activate(@PathVariable Long id) {
+    return bethelService.activate(id);
+  }
 
-    @PatchMapping("/{id}/deactivate")
-    public BethelResponse deactivate(@PathVariable Long id) {
-        return bethelService.deactivate(id);
-    }
+  @PatchMapping("/{id}/deactivate")
+  public BethelResponse deactivate(@PathVariable Long id) {
+    return bethelService.deactivate(id);
+  }
 }
