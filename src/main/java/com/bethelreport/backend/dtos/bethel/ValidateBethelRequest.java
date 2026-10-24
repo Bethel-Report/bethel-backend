@@ -8,7 +8,7 @@ import jakarta.validation.constraints.PastOrPresent;
 import jakarta.validation.constraints.Positive;
 import java.time.LocalDate;
 
-public record CreateBethelRequest(
+public record ValidateBethelRequest(
 
     @NotNull(message = "Número obrigatório.") @Positive(message = "Inválido.") Integer number,
 
