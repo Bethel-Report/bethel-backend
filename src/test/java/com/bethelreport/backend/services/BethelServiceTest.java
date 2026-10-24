@@ -25,13 +25,13 @@ class BethelServiceTest {
     service = new BethelService(repository);
   }
 
-  private CreateBethelRequest createRequest() {
-    return new CreateBethelRequest(12, "  Lírios do Vale  ", LocalDate.of(2020, 5, 10),
+  private ValidateBethelRequest createRequest() {
+    return new ValidateBethelRequest(12, "  Lírios do Vale  ", LocalDate.of(2020, 5, 10),
         "  Alexandria  ", "  Rua Principal  ", "  bethel@example.com  ", "  Loja União  ");
   }
 
-  private UpdateBethelRequest updateRequest(int number) {
-    return new UpdateBethelRequest(number, "  Nome atualizado  ", LocalDate.of(2021, 2, 3),
+  private ValidateBethelRequest updateRequest(int number) {
+    return new ValidateBethelRequest(number, "  Nome atualizado  ", LocalDate.of(2021, 2, 3),
         "  Natal  ", "  Rua Nova  ", "  novo@example.com  ", "  Loja Nova  ");
   }
 

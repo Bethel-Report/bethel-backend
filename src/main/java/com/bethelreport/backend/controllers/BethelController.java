@@ -2,8 +2,7 @@
 package com.bethelreport.backend.controllers;
 
 import com.bethelreport.backend.dtos.bethel.BethelResponse;
-import com.bethelreport.backend.dtos.bethel.CreateBethelRequest;
-import com.bethelreport.backend.dtos.bethel.UpdateBethelRequest;
+import com.bethelreport.backend.dtos.bethel.ValidateBethelRequest;
 import com.bethelreport.backend.services.BethelService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -31,7 +30,7 @@ public class BethelController {
 
   @PostMapping
   @ResponseStatus(HttpStatus.CREATED)
-  public BethelResponse create(@Valid @RequestBody CreateBethelRequest request) {
+  public BethelResponse create(@Valid @RequestBody ValidateBethelRequest request) {
 
     return bethelService.create(request);
   }
@@ -49,7 +48,7 @@ public class BethelController {
 
   @PutMapping("/{id}")
   public BethelResponse update(@PathVariable Long id,
-      @Valid @RequestBody UpdateBethelRequest request) {
+      @Valid @RequestBody ValidateBethelRequest request) {
 
     return bethelService.update(id, request);
   }

@@ -2,8 +2,7 @@
 package com.bethelreport.backend.services;
 
 import com.bethelreport.backend.dtos.bethel.BethelResponse;
-import com.bethelreport.backend.dtos.bethel.CreateBethelRequest;
-import com.bethelreport.backend.dtos.bethel.UpdateBethelRequest;
+import com.bethelreport.backend.dtos.bethel.ValidateBethelRequest;
 import com.bethelreport.backend.entities.Bethel;
 import com.bethelreport.backend.repositories.BethelRepository;
 import java.time.LocalDate;
@@ -23,7 +22,7 @@ public class BethelService {
   }
 
   @Transactional
-  public BethelResponse create(CreateBethelRequest request) {
+  public BethelResponse create(ValidateBethelRequest request) {
 
     if (bethelRepository.existsByNumber(request.number())) {
       throw new ResponseStatusException(HttpStatus.CONFLICT,
@@ -60,7 +59,7 @@ public class BethelService {
   }
 
   @Transactional
-  public BethelResponse update(Long id, UpdateBethelRequest request) {
+  public BethelResponse update(Long id, ValidateBethelRequest request) {
 
     Bethel bethel = getBethelOrThrow(id);
 
