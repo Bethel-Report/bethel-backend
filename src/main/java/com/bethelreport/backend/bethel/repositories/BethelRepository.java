@@ -1,7 +1,7 @@
 
-package com.bethelreport.backend.repositories;
+package com.bethelreport.backend.bethel.repositories;
 
-import com.bethelreport.backend.entities.Bethel;
+import com.bethelreport.backend.bethel.entities.Bethel;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
