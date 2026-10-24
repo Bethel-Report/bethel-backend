@@ -1,9 +1,9 @@
 
-package com.bethelreport.backend.controllers;
+package com.bethelreport.backend.bethel.controllers;
 
-import com.bethelreport.backend.dtos.bethel.BethelResponse;
-import com.bethelreport.backend.dtos.bethel.ValidateBethelRequest;
-import com.bethelreport.backend.services.BethelService;
+import com.bethelreport.backend.bethel.dtos.BethelResponse;
+import com.bethelreport.backend.bethel.dtos.ValidateBethelRequest;
+import com.bethelreport.backend.bethel.services.BethelService;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.HttpStatus;

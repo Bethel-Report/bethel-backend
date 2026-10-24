@@ -1,7 +1,6 @@
+package com.bethelreport.backend.bethel.dtos;
 
-package com.bethelreport.backend.dtos.bethel;
-
-import com.bethelreport.backend.entities.Bethel;
+import com.bethelreport.backend.bethel.entities.Bethel;
 import java.time.LocalDate;
 
 public record BethelResponse(Long id, Integer number, String name, LocalDate foundationDate,
