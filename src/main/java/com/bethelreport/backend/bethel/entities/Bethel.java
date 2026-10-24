@@ -1,5 +1,5 @@
 
-package com.bethelreport.backend.entities;
+package com.bethelreport.backend.bethel.entities;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

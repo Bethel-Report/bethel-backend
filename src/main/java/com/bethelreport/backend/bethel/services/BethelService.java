@@ -1,10 +1,10 @@
 
-package com.bethelreport.backend.services;
+package com.bethelreport.backend.bethel.services;
 
-import com.bethelreport.backend.dtos.bethel.BethelResponse;
-import com.bethelreport.backend.dtos.bethel.ValidateBethelRequest;
-import com.bethelreport.backend.entities.Bethel;
-import com.bethelreport.backend.repositories.BethelRepository;
+import com.bethelreport.backend.bethel.dtos.BethelResponse;
+import com.bethelreport.backend.bethel.dtos.ValidateBethelRequest;
+import com.bethelreport.backend.bethel.entities.Bethel;
+import com.bethelreport.backend.bethel.repositories.BethelRepository;
 import java.time.LocalDate;
 import java.util.List;
 import org.springframework.http.HttpStatus;
