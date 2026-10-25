@@ -19,6 +19,7 @@ import com.bethelreport.backend.exceptions.UserNotFoundException;
 import com.bethelreport.backend.users.mappers.UserMapper;
 import com.bethelreport.backend.users.mappers.UserMapperImpl;
 import com.bethelreport.backend.users.repositories.UserRepository;
+import com.bethelreport.backend.security.AuthorizationService;
 import org.mockito.Mockito;
 import java.time.LocalDate;
 import java.util.List;
@@ -29,8 +30,13 @@ class UserServiceTest {
   private final UserRepository userRepository = mock(UserRepository.class);
   private final UserMapper userMapper = new UserMapperImpl();
   private final PermissionService permissionService = mock(PermissionService.class);
+  private final AuthorizationService authorizationService = mock(AuthorizationService.class);
   private final UserService userService = new UserService(userRepository, userMapper,
-      permissionService);
+      permissionService, authorizationService);
+
+  {
+    when(authorizationService.canAssignRole(any(), any(), any())).thenReturn(true);
+  }
 
   @Test
   void createsUserSuccessfully() {

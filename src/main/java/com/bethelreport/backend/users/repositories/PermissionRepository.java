@@ -11,4 +11,6 @@ public interface PermissionRepository extends JpaRepository<Permission, Long> {
   java.util.List<Permission> findAllByBethelId(Long bethelId);
 
   boolean existsByUserId(Long userId);
+
+  Optional<Permission> findByUserEmail(String email);
 }

@@ -1,6 +1,7 @@
 package com.bethelreport.backend.bethel.controllers;
 
 import com.bethelreport.backend.config.SecurityConfig;
+import com.bethelreport.backend.security.AuthorizationServiceTestConfiguration;
 import com.bethelreport.backend.bethel.dtos.BethelResponse;
 import com.bethelreport.backend.bethel.services.BethelService;
 import com.bethelreport.backend.users.services.AdmissionService;
@@ -24,7 +25,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(BethelController.class)
-@Import(SecurityConfig.class)
+@Import({SecurityConfig.class, AuthorizationServiceTestConfiguration.class})
 class BethelControllerTest {
   @Autowired
   MockMvc mvc;
@@ -34,7 +35,6 @@ class BethelControllerTest {
   AdmissionService admissionService;
   @MockitoBean
   JwtDecoder jwtDecoder;
-
   private static final String BASE = "/api/bethels";
 
   private String validJson() {

@@ -2,6 +2,7 @@ package com.bethelreport.backend.users.services;
 
 import com.bethelreport.backend.bethel.entities.Bethel;
 import com.bethelreport.backend.bethel.repositories.BethelRepository;
+import com.bethelreport.backend.security.AuthorizationService;
 import com.bethelreport.backend.users.dtos.CreatePermissionRequest;
 import com.bethelreport.backend.users.dtos.PermissionResponse;
 import com.bethelreport.backend.users.dtos.UpdatePermissionRequest;
@@ -15,6 +16,8 @@ import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -25,9 +28,11 @@ public class PermissionService {
   private final UserRepository userRepository;
   private final BethelRepository bethelRepository;
   private final PermissionMapper permissionMapper;
+  private final AuthorizationService authorizationService;
 
   @Transactional
   public PermissionResponse create(CreatePermissionRequest request) {
+    requireCanAssignRole(request.role(), request.bethelId());
     User user = userRepository.findById(request.userId())
         .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado"));
 
@@ -51,16 +56,20 @@ public class PermissionService {
   public PermissionResponse findByUserId(Long userId) {
     Permission permission = permissionRepository.findByUserId(userId)
         .orElseThrow(() -> new EntityNotFoundException("Permissão do usuário não encontrada"));
+    requireCanAssignRole(permission.getRole(), getBethelId(permission));
     return permissionMapper.toResponse(permission);
   }
 
   public PermissionResponse findById(Long permissionId) {
-    return permissionMapper.toResponse(findPermissionOrThrow(permissionId));
+    Permission permission = findPermissionOrThrow(permissionId);
+    requireCanAssignRole(permission.getRole(), getBethelId(permission));
+    return permissionMapper.toResponse(permission);
   }
 
   @Transactional
   public PermissionResponse activate(Long permissionId) {
     Permission permission = findPermissionOrThrow(permissionId);
+    requireCanAssignRole(permission.getRole(), getBethelId(permission));
 
     if (permission.isActive()) {
       throw new IllegalArgumentException("Permissão já ativa");
@@ -74,6 +83,7 @@ public class PermissionService {
   @Transactional
   public PermissionResponse deactivate(Long permissionId) {
     Permission permission = findPermissionOrThrow(permissionId);
+    requireCanAssignRole(permission.getRole(), getBethelId(permission));
 
     if (!permission.isActive()) {
       throw new IllegalArgumentException("Permissão já desativada");
@@ -99,8 +109,10 @@ public class PermissionService {
   public PermissionResponse update(Long permissionId, UpdatePermissionRequest request) {
 
     Permission permission = findPermissionOrThrow(permissionId);
+    requireCanAssignRole(permission.getRole(), getBethelId(permission));
 
     Bethel bethel = validateAndGetBethel(request.role(), request.bethelId());
+    requireCanAssignRole(request.role(), request.bethelId());
 
     permissionMapper.updateEntity(request, permission);
     permission.setBethel(bethel);
@@ -111,6 +123,7 @@ public class PermissionService {
   @Transactional
   public void delete(Long permissionId) {
     Permission permission = findPermissionOrThrow(permissionId);
+    requireCanAssignRole(permission.getRole(), getBethelId(permission));
 
     permissionRepository.delete(permission);
   }
@@ -143,7 +156,19 @@ public class PermissionService {
   }
 
   private void deactivatePermission(Permission permission) {
+    requireCanAssignRole(permission.getRole(), getBethelId(permission));
     permission.setActive(false);
     permissionRepository.save(permission);
+  }
+
+  private void requireCanAssignRole(Role role, Long bethelId) {
+    if (!authorizationService.canAssignRole(SecurityContextHolder.getContext().getAuthentication(),
+        role, bethelId)) {
+      throw new AccessDeniedException("Você não tem permissão para gerenciar este perfil");
+    }
+  }
+
+  private Long getBethelId(Permission permission) {
+    return permission.getBethel() == null ? null : permission.getBethel().getId();
   }
 }
