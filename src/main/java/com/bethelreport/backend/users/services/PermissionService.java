@@ -1,0 +1,97 @@
+package com.bethelreport.backend.users.services;
+
+import com.bethelreport.backend.bethel.entities.Bethel;
+import com.bethelreport.backend.bethel.repositories.BethelRepository;
+import com.bethelreport.backend.users.dtos.CreatePermissionRequest;
+import com.bethelreport.backend.users.dtos.UpdatePermissionRequest;
+import com.bethelreport.backend.users.entities.Permission;
+import com.bethelreport.backend.users.entities.Role;
+import com.bethelreport.backend.users.entities.User;
+import com.bethelreport.backend.users.mappers.PermissionMapper;
+import com.bethelreport.backend.users.repositories.PermissionRepository;
+import com.bethelreport.backend.users.repositories.UserRepository;
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+@Service
+@RequiredArgsConstructor
+public class PermissionService {
+
+  private final PermissionRepository permissionRepository;
+  private final UserRepository userRepository;
+  private final BethelRepository bethelRepository;
+  private final PermissionMapper permissionMapper;
+
+  @Transactional
+  public Permission create(CreatePermissionRequest request) {
+    User user = userRepository.findById(request.userId())
+        .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado"));
+
+    if (!user.isActive()) {
+      throw new IllegalArgumentException("Não é possível atribuir perfil a usuário inativo");
+    }
+
+    if (permissionRepository.existsByUserId(user.getId())) {
+      throw new IllegalStateException("O usuário já possui um perfil associado");
+    }
+
+    Bethel bethel = validateAndGetBethel(request.role(), request.bethelId());
+
+    Permission permission = permissionMapper.toEntity(request);
+    permission.setUser(user);
+    permission.setBethel(bethel);
+
+    return permissionRepository.save(permission);
+  }
+
+  public Permission findByUserId(Long userId) {
+    return permissionRepository.findByUserId(userId)
+        .orElseThrow(() -> new EntityNotFoundException("Permissão do usuário não encontrada"));
+  }
+
+  @Transactional
+  public Permission update(Long permissionId, UpdatePermissionRequest request) {
+
+    Permission permission = permissionRepository.findById(permissionId)
+        .orElseThrow(() -> new EntityNotFoundException("Permissão não encontrada"));
+
+    Bethel bethel = validateAndGetBethel(request.role(), request.bethelId());
+
+    permissionMapper.updateEntity(request, permission);
+    permission.setBethel(bethel);
+
+    return permissionRepository.save(permission);
+  }
+
+  @Transactional
+  public void delete(Long permissionId) {
+    Permission permission = permissionRepository.findById(permissionId)
+        .orElseThrow(() -> new EntityNotFoundException("Permissão não encontrada"));
+
+    permissionRepository.delete(permission);
+  }
+
+  private Bethel validateAndGetBethel(Role role, Long bethelId) {
+
+    if (role == null) {
+      throw new IllegalArgumentException("O perfil é obrigatório");
+    }
+
+    if (role == Role.GRANDE_CONSELHO) {
+      if (bethelId != null) {
+        throw new IllegalArgumentException("Grande Conselho não deve estar associado a um Bethel");
+      }
+
+      return null;
+    }
+
+    if (bethelId == null) {
+      throw new IllegalArgumentException("Este perfil exige um Bethel");
+    }
+
+    return bethelRepository.findById(bethelId)
+        .orElseThrow(() -> new EntityNotFoundException("Bethel não encontrado"));
+  }
+}
