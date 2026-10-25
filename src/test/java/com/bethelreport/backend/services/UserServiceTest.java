@@ -16,6 +16,8 @@ import com.bethelreport.backend.dtos.UserResponse;
 import com.bethelreport.backend.entities.User;
 import com.bethelreport.backend.exceptions.DuplicateEmailException;
 import com.bethelreport.backend.exceptions.UserNotFoundException;
+import com.bethelreport.backend.mappers.UserMapper;
+import com.bethelreport.backend.mappers.UserMapperImpl;
 import com.bethelreport.backend.repositories.UserRepository;
 import java.time.LocalDate;
 import java.util.List;
@@ -24,7 +26,8 @@ import org.junit.jupiter.api.Test;
 
 class UserServiceTest {
   private final UserRepository userRepository = mock(UserRepository.class);
-  private final UserService userService = new UserService(userRepository);
+  private final UserMapper userMapper = new UserMapperImpl();
+  private final UserService userService = new UserService(userRepository, userMapper);
 
   @Test
   void createsUserSuccessfully() {
