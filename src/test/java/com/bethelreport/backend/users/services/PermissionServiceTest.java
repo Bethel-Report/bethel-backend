@@ -19,12 +19,14 @@ import com.bethelreport.backend.users.entities.User;
 import com.bethelreport.backend.users.mappers.PermissionMapper;
 import com.bethelreport.backend.users.repositories.PermissionRepository;
 import com.bethelreport.backend.users.repositories.UserRepository;
+import com.bethelreport.backend.security.AuthorizationService;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.Optional;
 
@@ -43,6 +45,9 @@ class PermissionServiceTest {
   @Mock
   private PermissionMapper permissionMapper;
 
+  @Mock
+  private AuthorizationService authorizationService;
+
   @InjectMocks
   private PermissionService permissionService;
 
@@ -51,6 +56,8 @@ class PermissionServiceTest {
 
   @BeforeEach
   void setUp() {
+    Mockito.lenient().when(authorizationService.canAssignRole(any(), any(), any()))
+        .thenReturn(true);
     user = new User();
     user.setId(1L);
     user.setActive(true);

@@ -1,5 +1,6 @@
 package com.bethelreport.backend.users.controllers;
 
+import com.bethelreport.backend.security.annotations.CanManageUsers;
 import com.bethelreport.backend.users.dtos.CreatePermissionRequest;
 import com.bethelreport.backend.users.dtos.PermissionResponse;
 import com.bethelreport.backend.users.dtos.UpdatePermissionRequest;
@@ -28,38 +29,45 @@ public class PermissionController {
     this.permissionService = permissionService;
   }
 
+  @CanManageUsers
   @PostMapping
   public ResponseEntity<PermissionResponse> create(
       @Valid @RequestBody CreatePermissionRequest request) {
     return ResponseEntity.status(HttpStatus.CREATED).body(permissionService.create(request));
   }
 
+  @CanManageUsers
   @GetMapping("/users/{userId}")
   public ResponseEntity<PermissionResponse> findByUserId(@PathVariable Long userId) {
     return ResponseEntity.ok(permissionService.findByUserId(userId));
   }
 
+  @CanManageUsers
   @GetMapping("/{permissionId}")
   public ResponseEntity<PermissionResponse> findById(@PathVariable Long permissionId) {
     return ResponseEntity.ok(permissionService.findById(permissionId));
   }
 
+  @CanManageUsers
   @PatchMapping("/{permissionId}/activate")
   public ResponseEntity<PermissionResponse> activate(@PathVariable Long permissionId) {
     return ResponseEntity.ok(permissionService.activate(permissionId));
   }
 
+  @CanManageUsers
   @PatchMapping("/{permissionId}/deactivate")
   public ResponseEntity<PermissionResponse> deactivate(@PathVariable Long permissionId) {
     return ResponseEntity.ok(permissionService.deactivate(permissionId));
   }
 
+  @CanManageUsers
   @PutMapping("/{permissionId}")
   public ResponseEntity<PermissionResponse> update(@PathVariable Long permissionId,
       @Valid @RequestBody UpdatePermissionRequest request) {
     return ResponseEntity.ok(permissionService.update(permissionId, request));
   }
 
+  @CanManageUsers
   @DeleteMapping("/{permissionId}")
   @ResponseStatus(HttpStatus.NO_CONTENT)
   public void delete(@PathVariable Long permissionId) {

@@ -5,6 +5,7 @@ import com.bethelreport.backend.bethel.dtos.ValidateBethelRequest;
 import com.bethelreport.backend.bethel.entities.Bethel;
 import com.bethelreport.backend.bethel.repositories.BethelRepository;
 import com.bethelreport.backend.users.services.PermissionService;
+import com.bethelreport.backend.security.AuthorizationService;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -20,13 +21,16 @@ import static org.mockito.Mockito.*;
 class BethelServiceTest {
   private BethelRepository repository;
   private PermissionService permissionService;
+  private AuthorizationService authorizationService;
   private BethelService service;
 
   @BeforeEach
   void setUp() {
     repository = mock(BethelRepository.class);
     permissionService = mock(PermissionService.class);
-    service = new BethelService(repository, permissionService);
+    authorizationService = mock(AuthorizationService.class);
+    when(authorizationService.canAssignRole(any(), any(), any())).thenReturn(true);
+    service = new BethelService(repository, permissionService, authorizationService);
   }
 
   private ValidateBethelRequest createRequest() {
