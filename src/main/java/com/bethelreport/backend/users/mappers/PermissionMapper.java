@@ -1,6 +1,7 @@
 package com.bethelreport.backend.users.mappers;
 
 import com.bethelreport.backend.users.dtos.CreatePermissionRequest;
+import com.bethelreport.backend.users.dtos.PermissionResponse;
 import com.bethelreport.backend.users.dtos.UpdatePermissionRequest;
 import com.bethelreport.backend.users.entities.Permission;
 import org.mapstruct.Mapper;
@@ -21,4 +22,8 @@ public interface PermissionMapper {
   @Mapping(target = "bethel", ignore = true)
   @Mapping(target = "active", ignore = true)
   void updateEntity(UpdatePermissionRequest request, @MappingTarget Permission permission);
+
+  @Mapping(target = "userId", source = "user.id")
+  @Mapping(target = "bethelId", source = "bethel.id")
+  PermissionResponse toResponse(Permission permission);
 }
