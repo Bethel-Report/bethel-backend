@@ -5,6 +5,7 @@ import com.bethelreport.backend.bethel.dtos.BethelResponse;
 import com.bethelreport.backend.bethel.dtos.ValidateBethelRequest;
 import com.bethelreport.backend.bethel.entities.Bethel;
 import com.bethelreport.backend.bethel.repositories.BethelRepository;
+import com.bethelreport.backend.users.services.PermissionService;
 import java.time.LocalDate;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -16,9 +17,11 @@ import org.springframework.web.server.ResponseStatusException;
 public class BethelService {
 
   private final BethelRepository bethelRepository;
+  private final PermissionService permissionService;
 
-  public BethelService(BethelRepository bethelRepository) {
+  public BethelService(BethelRepository bethelRepository, PermissionService permissionService) {
     this.bethelRepository = bethelRepository;
+    this.permissionService = permissionService;
   }
 
   @Transactional
@@ -89,6 +92,7 @@ public class BethelService {
 
     Bethel bethel = getBethelOrThrow(id);
     bethel.setActive(false);
+    permissionService.deactivateByBethelId(id);
 
     return BethelResponse.fromEntity(bethelRepository.save(bethel));
   }

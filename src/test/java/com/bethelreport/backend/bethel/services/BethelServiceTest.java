@@ -4,6 +4,7 @@ import com.bethelreport.backend.bethel.dtos.BethelResponse;
 import com.bethelreport.backend.bethel.dtos.ValidateBethelRequest;
 import com.bethelreport.backend.bethel.entities.Bethel;
 import com.bethelreport.backend.bethel.repositories.BethelRepository;
+import com.bethelreport.backend.users.services.PermissionService;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -18,12 +19,14 @@ import static org.mockito.Mockito.*;
 
 class BethelServiceTest {
   private BethelRepository repository;
+  private PermissionService permissionService;
   private BethelService service;
 
   @BeforeEach
   void setUp() {
     repository = mock(BethelRepository.class);
-    service = new BethelService(repository);
+    permissionService = mock(PermissionService.class);
+    service = new BethelService(repository, permissionService);
   }
 
   private ValidateBethelRequest createRequest() {
@@ -179,6 +182,7 @@ class BethelServiceTest {
     saveReturnsArgument();
     assertFalse(service.deactivate(1L).active());
     verify(repository).save(original);
+    verify(permissionService).deactivateByBethelId(1L);
   }
 
   @Test

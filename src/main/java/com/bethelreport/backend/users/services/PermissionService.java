@@ -12,6 +12,7 @@ import com.bethelreport.backend.users.repositories.PermissionRepository;
 import com.bethelreport.backend.users.repositories.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -49,6 +50,31 @@ public class PermissionService {
   public Permission findByUserId(Long userId) {
     return permissionRepository.findByUserId(userId)
         .orElseThrow(() -> new EntityNotFoundException("Permissão do usuário não encontrada"));
+  }
+
+  @Transactional
+  public Permission activate(Long permissionId) {
+    Permission permission = findPermissionOrThrow(permissionId);
+    permission.setActive(true);
+    return permissionRepository.save(permission);
+  }
+
+  @Transactional
+  public Permission deactivate(Long permissionId) {
+    Permission permission = findPermissionOrThrow(permissionId);
+    permission.setActive(false);
+    return permissionRepository.save(permission);
+  }
+
+  @Transactional
+  public void deactivateByUserId(Long userId) {
+    permissionRepository.findByUserId(userId).ifPresent(this::deactivatePermission);
+  }
+
+  @Transactional
+  public void deactivateByBethelId(Long bethelId) {
+    List<Permission> permissions = permissionRepository.findAllByBethelId(bethelId);
+    permissions.forEach(this::deactivatePermission);
   }
 
   @Transactional
@@ -93,5 +119,15 @@ public class PermissionService {
 
     return bethelRepository.findById(bethelId)
         .orElseThrow(() -> new EntityNotFoundException("Bethel não encontrado"));
+  }
+
+  private Permission findPermissionOrThrow(Long permissionId) {
+    return permissionRepository.findById(permissionId)
+        .orElseThrow(() -> new EntityNotFoundException("Permissão não encontrada"));
+  }
+
+  private void deactivatePermission(Permission permission) {
+    permission.setActive(false);
+    permissionRepository.save(permission);
   }
 }

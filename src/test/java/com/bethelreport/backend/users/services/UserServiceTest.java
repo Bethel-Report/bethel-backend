@@ -19,6 +19,7 @@ import com.bethelreport.backend.exceptions.UserNotFoundException;
 import com.bethelreport.backend.users.mappers.UserMapper;
 import com.bethelreport.backend.users.mappers.UserMapperImpl;
 import com.bethelreport.backend.users.repositories.UserRepository;
+import org.mockito.Mockito;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -27,7 +28,9 @@ import org.junit.jupiter.api.Test;
 class UserServiceTest {
   private final UserRepository userRepository = mock(UserRepository.class);
   private final UserMapper userMapper = new UserMapperImpl();
-  private final UserService userService = new UserService(userRepository, userMapper);
+  private final PermissionService permissionService = mock(PermissionService.class);
+  private final UserService userService = new UserService(userRepository, userMapper,
+      permissionService);
 
   @Test
   void createsUserSuccessfully() {
@@ -158,6 +161,7 @@ class UserServiceTest {
     UserResponse response = userService.deactivateUser(1L);
 
     assertFalse(response.active());
+    Mockito.verify(permissionService).deactivateByUserId(1L);
   }
 
   @Test

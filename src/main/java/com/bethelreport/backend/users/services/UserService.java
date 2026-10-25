@@ -10,15 +10,19 @@ import com.bethelreport.backend.users.mappers.UserMapper;
 import com.bethelreport.backend.users.repositories.UserRepository;
 import java.util.List;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class UserService {
   private final UserRepository userRepository;
   private final UserMapper userMapper;
+  private final PermissionService permissionService;
 
-  public UserService(UserRepository userRepository, UserMapper userMapper) {
+  public UserService(UserRepository userRepository, UserMapper userMapper,
+      PermissionService permissionService) {
     this.userRepository = userRepository;
     this.userMapper = userMapper;
+    this.permissionService = permissionService;
   }
 
   public UserResponse createUser(CreateUserRequest request) {
@@ -53,10 +57,13 @@ public class UserService {
     return userMapper.toResponse(userRepository.save(user));
   }
 
+  @Transactional
   public UserResponse deactivateUser(Long id) {
     User user = findUserOrThrow(id);
     user.setActive(false);
-    return userMapper.toResponse(userRepository.save(user));
+    User savedUser = userRepository.save(user);
+    permissionService.deactivateByUserId(id);
+    return userMapper.toResponse(savedUser);
   }
 
   private User findUserOrThrow(Long id) {

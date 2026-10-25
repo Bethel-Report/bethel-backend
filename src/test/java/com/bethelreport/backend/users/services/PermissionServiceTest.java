@@ -3,6 +3,8 @@ package com.bethelreport.backend.users.services;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -65,6 +67,7 @@ class PermissionServiceTest {
     when(bethelRepository.findById(10L)).thenReturn(Optional.of(bethel));
     Permission mappedPermission = new Permission();
     mappedPermission.setRole(request.role());
+    mappedPermission.setActive(true);
     when(permissionMapper.toEntity(request)).thenReturn(mappedPermission);
     when(permissionRepository.save(any(Permission.class)))
         .thenAnswer(invocation -> invocation.getArgument(0));
@@ -75,8 +78,37 @@ class PermissionServiceTest {
     assertEquals(Role.MEMBRO_ATIVO, result.getRole());
     assertEquals(user, result.getUser());
     assertEquals(bethel, result.getBethel());
+    assertTrue(result.isActive());
 
     verify(permissionRepository).save(any(Permission.class));
+  }
+
+  @Test
+  void activatesPermission() {
+    Permission permission = new Permission();
+    permission.setId(1L);
+    permission.setActive(false);
+    when(permissionRepository.findById(1L)).thenReturn(Optional.of(permission));
+    when(permissionRepository.save(any(Permission.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    Permission result = permissionService.activate(1L);
+
+    assertTrue(result.isActive());
+  }
+
+  @Test
+  void deactivatesPermission() {
+    Permission permission = new Permission();
+    permission.setId(1L);
+    permission.setActive(true);
+    when(permissionRepository.findById(1L)).thenReturn(Optional.of(permission));
+    when(permissionRepository.save(any(Permission.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    Permission result = permissionService.deactivate(1L);
+
+    assertFalse(result.isActive());
   }
 
   @Test

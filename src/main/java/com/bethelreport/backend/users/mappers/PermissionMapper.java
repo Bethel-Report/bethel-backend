@@ -13,10 +13,12 @@ public interface PermissionMapper {
   @Mapping(target = "id", ignore = true)
   @Mapping(target = "user", ignore = true)
   @Mapping(target = "bethel", ignore = true)
+  @Mapping(target = "active", constant = "true")
   Permission toEntity(CreatePermissionRequest request);
 
   @Mapping(target = "id", ignore = true)
   @Mapping(target = "user", ignore = true)
   @Mapping(target = "bethel", ignore = true)
+  @Mapping(target = "active", ignore = true)
   void updateEntity(UpdatePermissionRequest request, @MappingTarget Permission permission);
 }
