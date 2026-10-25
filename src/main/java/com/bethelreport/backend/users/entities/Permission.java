@@ -37,4 +37,7 @@ public class Permission {
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "bethel_id")
   private Bethel bethel;
+
+  @Column(nullable = false)
+  private boolean active = true;
 }
