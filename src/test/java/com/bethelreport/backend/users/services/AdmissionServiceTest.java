@@ -1,4 +1,4 @@
-package com.bethelreport.backend.services;
+package com.bethelreport.backend.users.services;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -8,7 +8,6 @@ import static org.mockito.Mockito.when;
 import com.bethelreport.backend.users.entities.User;
 import com.bethelreport.backend.users.repositories.UserRepository;
 import java.util.Optional;
-import com.bethelreport.backend.users.services.AdmissionService;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.oauth2.jwt.Jwt;
 

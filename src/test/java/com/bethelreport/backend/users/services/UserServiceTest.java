@@ -1,4 +1,4 @@
-package com.bethelreport.backend.services;
+package com.bethelreport.backend.users.services;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -22,7 +22,6 @@ import com.bethelreport.backend.users.repositories.UserRepository;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
-import com.bethelreport.backend.users.services.UserService;
 import org.junit.jupiter.api.Test;
 
 class UserServiceTest {
