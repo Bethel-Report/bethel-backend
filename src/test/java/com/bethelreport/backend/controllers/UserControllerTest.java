@@ -13,13 +13,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.bethelreport.backend.config.SecurityConfig;
-import com.bethelreport.backend.dtos.CreateUserRequest;
-import com.bethelreport.backend.dtos.UpdateUserRequest;
-import com.bethelreport.backend.dtos.UserResponse;
+import com.bethelreport.backend.users.controllers.UserController;
+import com.bethelreport.backend.users.dtos.CreateUserRequest;
+import com.bethelreport.backend.users.dtos.UpdateUserRequest;
+import com.bethelreport.backend.users.dtos.UserResponse;
 import com.bethelreport.backend.exceptions.DuplicateEmailException;
 import com.bethelreport.backend.exceptions.UserNotFoundException;
-import com.bethelreport.backend.services.AdmissionService;
-import com.bethelreport.backend.services.UserService;
+import com.bethelreport.backend.users.services.AdmissionService;
+import com.bethelreport.backend.users.services.UserService;
 import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;

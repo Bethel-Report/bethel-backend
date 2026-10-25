@@ -5,9 +5,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.bethelreport.backend.entities.User;
-import com.bethelreport.backend.repositories.UserRepository;
+import com.bethelreport.backend.users.entities.User;
+import com.bethelreport.backend.users.repositories.UserRepository;
 import java.util.Optional;
+import com.bethelreport.backend.users.services.AdmissionService;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.oauth2.jwt.Jwt;
 
