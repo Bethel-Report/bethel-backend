@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 import com.bethelreport.backend.bethel.entities.Bethel;
 import com.bethelreport.backend.bethel.repositories.BethelRepository;
 import com.bethelreport.backend.users.dtos.CreatePermissionRequest;
+import com.bethelreport.backend.users.dtos.PermissionResponse;
 import com.bethelreport.backend.users.entities.Permission;
 import com.bethelreport.backend.users.entities.Role;
 import com.bethelreport.backend.users.entities.User;
@@ -72,13 +73,14 @@ class PermissionServiceTest {
     when(permissionRepository.save(any(Permission.class)))
         .thenAnswer(invocation -> invocation.getArgument(0));
 
-    Permission result = permissionService.create(request);
+    stubPermissionResponse();
+    PermissionResponse result = permissionService.create(request);
 
     assertNotNull(result);
-    assertEquals(Role.MEMBRO_ATIVO, result.getRole());
-    assertEquals(user, result.getUser());
-    assertEquals(bethel, result.getBethel());
-    assertTrue(result.isActive());
+    assertEquals(Role.MEMBRO_ATIVO, result.role());
+    assertEquals(user.getId(), result.userId());
+    assertEquals(bethel.getId(), result.bethelId());
+    assertTrue(result.active());
 
     verify(permissionRepository).save(any(Permission.class));
   }
@@ -91,10 +93,11 @@ class PermissionServiceTest {
     when(permissionRepository.findById(1L)).thenReturn(Optional.of(permission));
     when(permissionRepository.save(any(Permission.class)))
         .thenAnswer(invocation -> invocation.getArgument(0));
+    stubPermissionResponse();
 
-    Permission result = permissionService.activate(1L);
+    PermissionResponse result = permissionService.activate(1L);
 
-    assertTrue(result.isActive());
+    assertTrue(result.active());
   }
 
   @Test
@@ -105,10 +108,28 @@ class PermissionServiceTest {
     when(permissionRepository.findById(1L)).thenReturn(Optional.of(permission));
     when(permissionRepository.save(any(Permission.class)))
         .thenAnswer(invocation -> invocation.getArgument(0));
+    stubPermissionResponse();
 
-    Permission result = permissionService.deactivate(1L);
+    PermissionResponse result = permissionService.deactivate(1L);
 
-    assertFalse(result.isActive());
+    assertFalse(result.active());
+  }
+
+  @Test
+  void findsPermissionById() {
+    Permission permission = new Permission();
+    permission.setId(1L);
+    permission.setUser(user);
+    permission.setRole(Role.MEMBRO_ATIVO);
+    permission.setBethel(bethel);
+    when(permissionRepository.findById(1L)).thenReturn(Optional.of(permission));
+    stubPermissionResponse();
+
+    PermissionResponse result = permissionService.findById(1L);
+
+    assertEquals(1L, result.id());
+    assertEquals(user.getId(), result.userId());
+    assertEquals(bethel.getId(), result.bethelId());
   }
 
   @Test
@@ -183,5 +204,15 @@ class PermissionServiceTest {
     assertThrows(EntityNotFoundException.class, () -> permissionService.create(request));
 
     verify(permissionRepository, never()).save(any(Permission.class));
+  }
+
+  private void stubPermissionResponse() {
+    when(permissionMapper.toResponse(any(Permission.class))).thenAnswer(invocation -> {
+      Permission permission = invocation.getArgument(0);
+      Long userId = permission.getUser() == null ? null : permission.getUser().getId();
+      Long bethelId = permission.getBethel() == null ? null : permission.getBethel().getId();
+      return new PermissionResponse(permission.getId(), userId, permission.getRole(), bethelId,
+          permission.isActive());
+    });
   }
 }

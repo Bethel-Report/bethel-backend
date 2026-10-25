@@ -3,6 +3,7 @@ package com.bethelreport.backend.users.services;
 import com.bethelreport.backend.bethel.entities.Bethel;
 import com.bethelreport.backend.bethel.repositories.BethelRepository;
 import com.bethelreport.backend.users.dtos.CreatePermissionRequest;
+import com.bethelreport.backend.users.dtos.PermissionResponse;
 import com.bethelreport.backend.users.dtos.UpdatePermissionRequest;
 import com.bethelreport.backend.users.entities.Permission;
 import com.bethelreport.backend.users.entities.Role;
@@ -26,7 +27,7 @@ public class PermissionService {
   private final PermissionMapper permissionMapper;
 
   @Transactional
-  public Permission create(CreatePermissionRequest request) {
+  public PermissionResponse create(CreatePermissionRequest request) {
     User user = userRepository.findById(request.userId())
         .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado"));
 
@@ -44,26 +45,43 @@ public class PermissionService {
     permission.setUser(user);
     permission.setBethel(bethel);
 
-    return permissionRepository.save(permission);
+    return permissionMapper.toResponse(permissionRepository.save(permission));
   }
 
-  public Permission findByUserId(Long userId) {
-    return permissionRepository.findByUserId(userId)
+  public PermissionResponse findByUserId(Long userId) {
+    Permission permission = permissionRepository.findByUserId(userId)
         .orElseThrow(() -> new EntityNotFoundException("Permissão do usuário não encontrada"));
+    return permissionMapper.toResponse(permission);
+  }
+
+  public PermissionResponse findById(Long permissionId) {
+    return permissionMapper.toResponse(findPermissionOrThrow(permissionId));
   }
 
   @Transactional
-  public Permission activate(Long permissionId) {
+  public PermissionResponse activate(Long permissionId) {
     Permission permission = findPermissionOrThrow(permissionId);
-    permission.setActive(true);
-    return permissionRepository.save(permission);
+
+    if (permission.isActive()) {
+      throw new IllegalArgumentException("Permissão já ativa");
+    } else {
+      permission.setActive(true);
+    }
+
+    return permissionMapper.toResponse(permissionRepository.save(permission));
   }
 
   @Transactional
-  public Permission deactivate(Long permissionId) {
+  public PermissionResponse deactivate(Long permissionId) {
     Permission permission = findPermissionOrThrow(permissionId);
-    permission.setActive(false);
-    return permissionRepository.save(permission);
+
+    if (!permission.isActive()) {
+      throw new IllegalArgumentException("Permissão já desativada");
+    } else {
+      permission.setActive(false);
+    }
+
+    return permissionMapper.toResponse(permissionRepository.save(permission));
   }
 
   @Transactional
@@ -78,23 +96,21 @@ public class PermissionService {
   }
 
   @Transactional
-  public Permission update(Long permissionId, UpdatePermissionRequest request) {
+  public PermissionResponse update(Long permissionId, UpdatePermissionRequest request) {
 
-    Permission permission = permissionRepository.findById(permissionId)
-        .orElseThrow(() -> new EntityNotFoundException("Permissão não encontrada"));
+    Permission permission = findPermissionOrThrow(permissionId);
 
     Bethel bethel = validateAndGetBethel(request.role(), request.bethelId());
 
     permissionMapper.updateEntity(request, permission);
     permission.setBethel(bethel);
 
-    return permissionRepository.save(permission);
+    return permissionMapper.toResponse(permissionRepository.save(permission));
   }
 
   @Transactional
   public void delete(Long permissionId) {
-    Permission permission = permissionRepository.findById(permissionId)
-        .orElseThrow(() -> new EntityNotFoundException("Permissão não encontrada"));
+    Permission permission = findPermissionOrThrow(permissionId);
 
     permissionRepository.delete(permission);
   }
