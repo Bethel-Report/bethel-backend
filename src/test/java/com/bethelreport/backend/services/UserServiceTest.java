@@ -17,7 +17,7 @@ import com.bethelreport.backend.users.entities.User;
 import com.bethelreport.backend.exceptions.DuplicateEmailException;
 import com.bethelreport.backend.exceptions.UserNotFoundException;
 import com.bethelreport.backend.users.mappers.UserMapper;
-import com.bethelreport.backend.mappers.UserMapperImpl;
+import com.bethelreport.backend.users.mappers.UserMapperImpl;
 import com.bethelreport.backend.users.repositories.UserRepository;
 import java.time.LocalDate;
 import java.util.List;
