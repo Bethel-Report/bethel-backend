@@ -10,18 +10,19 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.bethelreport.backend.dtos.CreateUserRequest;
-import com.bethelreport.backend.dtos.UpdateUserRequest;
-import com.bethelreport.backend.dtos.UserResponse;
-import com.bethelreport.backend.entities.User;
+import com.bethelreport.backend.users.dtos.CreateUserRequest;
+import com.bethelreport.backend.users.dtos.UpdateUserRequest;
+import com.bethelreport.backend.users.dtos.UserResponse;
+import com.bethelreport.backend.users.entities.User;
 import com.bethelreport.backend.exceptions.DuplicateEmailException;
 import com.bethelreport.backend.exceptions.UserNotFoundException;
-import com.bethelreport.backend.mappers.UserMapper;
+import com.bethelreport.backend.users.mappers.UserMapper;
 import com.bethelreport.backend.mappers.UserMapperImpl;
-import com.bethelreport.backend.repositories.UserRepository;
+import com.bethelreport.backend.users.repositories.UserRepository;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import com.bethelreport.backend.users.services.UserService;
 import org.junit.jupiter.api.Test;
 
 class UserServiceTest {

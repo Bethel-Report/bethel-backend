@@ -1,4 +1,4 @@
-package com.bethelreport.backend.dtos;
+package com.bethelreport.backend.users.dtos;
 
 import java.time.LocalDate;
 

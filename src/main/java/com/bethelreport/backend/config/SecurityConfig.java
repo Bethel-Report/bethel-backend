@@ -1,6 +1,6 @@
 package com.bethelreport.backend.config;
 
-import com.bethelreport.backend.services.AdmissionService;
+import com.bethelreport.backend.users.services.AdmissionService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authorization.AuthorizationDecision;

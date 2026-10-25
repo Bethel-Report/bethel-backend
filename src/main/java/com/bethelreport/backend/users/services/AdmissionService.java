@@ -1,7 +1,7 @@
-package com.bethelreport.backend.services;
+package com.bethelreport.backend.users.services;
 
-import com.bethelreport.backend.entities.User;
-import com.bethelreport.backend.repositories.UserRepository;
+import com.bethelreport.backend.users.entities.User;
+import com.bethelreport.backend.users.repositories.UserRepository;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 

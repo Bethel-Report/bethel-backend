@@ -1,13 +1,13 @@
-package com.bethelreport.backend.services;
+package com.bethelreport.backend.users.services;
 
-import com.bethelreport.backend.dtos.CreateUserRequest;
-import com.bethelreport.backend.dtos.UpdateUserRequest;
-import com.bethelreport.backend.dtos.UserResponse;
-import com.bethelreport.backend.entities.User;
+import com.bethelreport.backend.users.dtos.CreateUserRequest;
+import com.bethelreport.backend.users.dtos.UpdateUserRequest;
+import com.bethelreport.backend.users.dtos.UserResponse;
+import com.bethelreport.backend.users.entities.User;
 import com.bethelreport.backend.exceptions.DuplicateEmailException;
 import com.bethelreport.backend.exceptions.UserNotFoundException;
-import com.bethelreport.backend.mappers.UserMapper;
-import com.bethelreport.backend.repositories.UserRepository;
+import com.bethelreport.backend.users.mappers.UserMapper;
+import com.bethelreport.backend.users.repositories.UserRepository;
 import java.util.List;
 import org.springframework.stereotype.Service;
 
