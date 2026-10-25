@@ -13,6 +13,7 @@ import com.bethelreport.backend.bethel.entities.Bethel;
 import com.bethelreport.backend.bethel.repositories.BethelRepository;
 import com.bethelreport.backend.users.dtos.CreatePermissionRequest;
 import com.bethelreport.backend.users.dtos.PermissionResponse;
+import com.bethelreport.backend.users.dtos.UpdatePermissionRequest;
 import com.bethelreport.backend.users.entities.Permission;
 import com.bethelreport.backend.users.entities.Role;
 import com.bethelreport.backend.users.entities.User;
@@ -21,6 +22,7 @@ import com.bethelreport.backend.users.repositories.PermissionRepository;
 import com.bethelreport.backend.users.repositories.UserRepository;
 import com.bethelreport.backend.security.AuthorizationService;
 import jakarta.persistence.EntityNotFoundException;
+import org.springframework.security.access.AccessDeniedException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -90,6 +92,28 @@ class PermissionServiceTest {
     assertTrue(result.active());
 
     verify(permissionRepository).save(any(Permission.class));
+  }
+
+  @Test
+  void deniesCreatingMemberInAnotherBethel() {
+    CreatePermissionRequest request = new CreatePermissionRequest(1L, Role.MEMBRO_ATIVO, 11L);
+    when(authorizationService.canAssignRole(any(), any(), any())).thenReturn(false);
+
+    assertThrows(AccessDeniedException.class, () -> permissionService.create(request));
+    verify(permissionRepository, never()).save(any(Permission.class));
+  }
+
+  @Test
+  void deniesChangingGrandCouncilPermission() {
+    Permission permission = new Permission();
+    permission.setId(2L);
+    permission.setRole(Role.GRANDE_CONSELHO);
+    when(permissionRepository.findById(2L)).thenReturn(Optional.of(permission));
+    when(authorizationService.canAssignRole(any(), any(), any())).thenReturn(false);
+
+    assertThrows(AccessDeniedException.class,
+        () -> permissionService.update(2L, new UpdatePermissionRequest(Role.MEMBRO_ATIVO, 10L)));
+    verify(permissionRepository, never()).save(any(Permission.class));
   }
 
   @Test

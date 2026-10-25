@@ -1,12 +1,17 @@
 package com.bethelreport.backend.bethel.controllers;
 
 import com.bethelreport.backend.config.SecurityConfig;
-import com.bethelreport.backend.security.AuthorizationServiceTestConfiguration;
+import com.bethelreport.backend.security.AuthorizationService;
 import com.bethelreport.backend.bethel.dtos.BethelResponse;
 import com.bethelreport.backend.bethel.services.BethelService;
+import com.bethelreport.backend.bethel.entities.Bethel;
+import com.bethelreport.backend.users.entities.Permission;
+import com.bethelreport.backend.users.entities.Role;
+import com.bethelreport.backend.users.repositories.PermissionRepository;
 import com.bethelreport.backend.users.services.AdmissionService;
 import java.time.LocalDate;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -25,7 +30,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(BethelController.class)
-@Import({SecurityConfig.class, AuthorizationServiceTestConfiguration.class})
+@Import({SecurityConfig.class, AuthorizationService.class})
 class BethelControllerTest {
   @Autowired
   MockMvc mvc;
@@ -35,7 +40,30 @@ class BethelControllerTest {
   AdmissionService admissionService;
   @MockitoBean
   JwtDecoder jwtDecoder;
+  @MockitoBean
+  PermissionRepository permissionRepository;
   private static final String BASE = "/api/bethels";
+
+  @BeforeEach
+  void setUpAuthorization() {
+    when(permissionRepository.findByUserEmail("gc@example.com"))
+        .thenReturn(java.util.Optional.of(permission(Role.GRANDE_CONSELHO, null)));
+    when(permissionRepository.findByUserEmail("council@example.com"))
+        .thenReturn(java.util.Optional.of(permission(Role.CONSELHO_DE_BETHEL, 10L)));
+    when(permissionRepository.findByUserEmail("member@example.com"))
+        .thenReturn(java.util.Optional.of(permission(Role.MEMBRO_ATIVO, 10L)));
+  }
+
+  private Permission permission(Role role, Long bethelId) {
+    Permission permission = new Permission();
+    permission.setRole(role);
+    if (bethelId != null) {
+      Bethel bethel = new Bethel();
+      bethel.setId(bethelId);
+      permission.setBethel(bethel);
+    }
+    return permission;
+  }
 
   private String validJson() {
     return """
@@ -52,7 +80,13 @@ class BethelControllerTest {
 
   private org.springframework.test.web.servlet.request.RequestPostProcessor admittedJwt() {
     when(admissionService.admittedUser(any(Jwt.class))).thenReturn(true);
-    return jwt();
+    return jwt().jwt(token -> token.claim("email", "gc@example.com"));
+  }
+
+  private org.springframework.test.web.servlet.request.RequestPostProcessor admittedJwt(
+      String email) {
+    when(admissionService.admittedUser(any(Jwt.class))).thenReturn(true);
+    return jwt().jwt(token -> token.claim("email", email));
   }
 
   @Test
@@ -85,6 +119,47 @@ class BethelControllerTest {
     when(service.findById(1L)).thenReturn(response(true));
     mvc.perform(get(BASE + "/1").with(admittedJwt())).andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value(1));
+  }
+
+  @Test
+  void councilCanAccessOwnBethelButNotAnotherBethel() throws Exception {
+    when(service.findById(10L)).thenReturn(response(true));
+
+    mvc.perform(get(BASE + "/10").with(admittedJwt("council@example.com")))
+        .andExpect(status().isOk());
+    mvc.perform(get(BASE + "/11").with(admittedJwt("council@example.com")))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void councilCanUpdateOwnBethelButNotAnotherBethel() throws Exception {
+    when(service.update(eq(10L), any())).thenReturn(response(true));
+
+    mvc.perform(put(BASE + "/10").with(admittedJwt("council@example.com"))
+        .contentType(MediaType.APPLICATION_JSON).content(validJson())).andExpect(status().isOk());
+    mvc.perform(put(BASE + "/11").with(admittedJwt("council@example.com"))
+        .contentType(MediaType.APPLICATION_JSON).content(validJson()))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void memberCanReadOwnBethelButCannotChangeAdministrativeData() throws Exception {
+    when(service.findById(10L)).thenReturn(response(true));
+
+    mvc.perform(get(BASE + "/10").with(admittedJwt("member@example.com")))
+        .andExpect(status().isOk());
+    mvc.perform(put(BASE + "/10").with(admittedJwt("member@example.com"))
+        .contentType(MediaType.APPLICATION_JSON).content(validJson()))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void userWithoutPermissionCannotAccessProtectedBethel() throws Exception {
+    when(permissionRepository.findByUserEmail("no-permission@example.com"))
+        .thenReturn(java.util.Optional.empty());
+    mvc.perform(get(BASE + "/10").with(admittedJwt("no-permission@example.com")))
+        .andExpect(status().isForbidden());
+    verifyNoInteractions(service);
   }
 
   @Test
