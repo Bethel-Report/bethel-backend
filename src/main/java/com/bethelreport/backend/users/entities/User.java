@@ -1,4 +1,4 @@
-package com.bethelreport.backend.entities;
+package com.bethelreport.backend.users.entities;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
