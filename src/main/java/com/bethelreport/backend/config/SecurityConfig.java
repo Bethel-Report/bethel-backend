@@ -1,6 +1,7 @@
 package com.bethelreport.backend.config;
 
 import com.bethelreport.backend.users.services.AdmissionService;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authorization.AuthorizationDecision;
@@ -40,6 +41,18 @@ public class SecurityConfig {
               boolean admitted = admissionService.admittedUser(jwtAuth.getToken());
 
               return new AuthorizationDecision(admitted);
+            }))
+        .exceptionHandling(
+            exception -> exception.authenticationEntryPoint((request, response, ex) -> {
+              response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+              response.setContentType("application/json");
+              response.getWriter().write("{\"status\":401," + "\"error\":\"Unauthorized\","
+                  + "\"message\":\"Autenticação necessária.\"}");
+            }).accessDeniedHandler((request, response, ex) -> {
+              response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+              response.setContentType("application/json");
+              response.getWriter().write("{\"status\":403," + "\"error\":\"Forbidden\","
+                  + "\"message\":\"Acesso não permitido.\"}");
             }))
         .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
 
