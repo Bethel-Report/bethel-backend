@@ -1,4 +1,4 @@
-package com.bethelreport.backend.controllers;
+package com.bethelreport.backend.users.controllers;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -13,7 +13,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.bethelreport.backend.config.SecurityConfig;
-import com.bethelreport.backend.users.controllers.UserController;
+import com.bethelreport.backend.permissions.services.AuthorizationService;
+import com.bethelreport.backend.bethel.entities.Bethel;
+import com.bethelreport.backend.permissions.entities.Permission;
+import com.bethelreport.backend.permissions.entities.Role;
+import com.bethelreport.backend.permissions.repositories.PermissionRepository;
 import com.bethelreport.backend.users.dtos.CreateUserRequest;
 import com.bethelreport.backend.users.dtos.UpdateUserRequest;
 import com.bethelreport.backend.users.dtos.UserResponse;
@@ -34,7 +38,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.ObjectMapper;
 
 @WebMvcTest(UserController.class)
-@Import(SecurityConfig.class)
+@Import({SecurityConfig.class, AuthorizationService.class})
 class UserControllerTest {
 
   @Autowired
@@ -49,9 +53,23 @@ class UserControllerTest {
   @MockitoBean
   private AdmissionService admissionService;
 
+  @MockitoBean
+  private PermissionRepository permissionRepository;
+
   @BeforeEach
   void setUp() {
     when(admissionService.admittedUser(any())).thenReturn(true);
+    Permission councilPermission = new Permission();
+    councilPermission.setRole(Role.CONSELHO_DE_BETHEL);
+    Bethel bethel = new Bethel();
+    bethel.setId(10L);
+    councilPermission.setBethel(bethel);
+    when(permissionRepository.findByUserEmail("council@example.com"))
+        .thenReturn(java.util.Optional.of(councilPermission));
+  }
+
+  private org.springframework.test.web.servlet.request.RequestPostProcessor councilJwt() {
+    return jwt().jwt(token -> token.claim("email", "council@example.com"));
   }
 
   @Test
@@ -63,7 +81,7 @@ class UserControllerTest {
     when(userService.createUser(any(CreateUserRequest.class))).thenReturn(response);
 
     mockMvc
-        .perform(post("/api/users").with(jwt()).contentType(MediaType.APPLICATION_JSON)
+        .perform(post("/api/users").with(councilJwt()).contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(request)))
         .andExpect(status().isCreated()).andExpect(jsonPath("$.id").value(1))
         .andExpect(jsonPath("$.email").value("user@example.com"))
@@ -76,7 +94,7 @@ class UserControllerTest {
         false);
 
     mockMvc
-        .perform(post("/api/users").with(jwt()).contentType(MediaType.APPLICATION_JSON)
+        .perform(post("/api/users").with(councilJwt()).contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(invalid)))
         .andExpect(status().isBadRequest()).andExpect(jsonPath("$.errors").exists());
   }
@@ -90,7 +108,7 @@ class UserControllerTest {
         .thenThrow(new DuplicateEmailException("dup@example.com"));
 
     mockMvc
-        .perform(post("/api/users").with(jwt()).contentType(MediaType.APPLICATION_JSON)
+        .perform(post("/api/users").with(councilJwt()).contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(request)))
         .andExpect(status().isConflict()).andExpect(jsonPath("$.message").exists());
   }
@@ -99,7 +117,7 @@ class UserControllerTest {
   void listUsersReturnsOk() throws Exception {
     when(userService.listUsers()).thenReturn(List.of(userResponse(1L, "a@example.com", true)));
 
-    mockMvc.perform(get("/api/users").with(jwt())).andExpect(status().isOk())
+    mockMvc.perform(get("/api/users").with(councilJwt())).andExpect(status().isOk())
         .andExpect(jsonPath("$[0].email").value("a@example.com"));
   }
 
@@ -107,7 +125,7 @@ class UserControllerTest {
   void getUserByIdReturnsOk() throws Exception {
     when(userService.getUserById(1L)).thenReturn(userResponse(1L, "a@example.com", true));
 
-    mockMvc.perform(get("/api/users/1").with(jwt())).andExpect(status().isOk())
+    mockMvc.perform(get("/api/users/1").with(councilJwt())).andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value(1));
   }
 
@@ -115,7 +133,7 @@ class UserControllerTest {
   void getUserByIdNotFoundReturnsNotFound() throws Exception {
     when(userService.getUserById(99L)).thenThrow(new UserNotFoundException(99L));
 
-    mockMvc.perform(get("/api/users/99").with(jwt())).andExpect(status().isNotFound())
+    mockMvc.perform(get("/api/users/99").with(councilJwt())).andExpect(status().isNotFound())
         .andExpect(jsonPath("$.message").exists());
   }
 
@@ -128,7 +146,7 @@ class UserControllerTest {
     when(userService.updateUser(eq(1L), any(UpdateUserRequest.class))).thenReturn(response);
 
     mockMvc
-        .perform(put("/api/users/1").with(jwt()).contentType(MediaType.APPLICATION_JSON)
+        .perform(put("/api/users/1").with(councilJwt()).contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(request)))
         .andExpect(status().isOk()).andExpect(jsonPath("$.email").value("updated@example.com"));
   }
@@ -139,7 +157,7 @@ class UserControllerTest {
         false);
 
     mockMvc
-        .perform(put("/api/users/1").with(jwt()).contentType(MediaType.APPLICATION_JSON)
+        .perform(put("/api/users/1").with(councilJwt()).contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(invalid)))
         .andExpect(status().isBadRequest()).andExpect(jsonPath("$.errors").exists());
   }
@@ -152,7 +170,7 @@ class UserControllerTest {
     when(userService.updateUser(eq(1L), any(UpdateUserRequest.class)))
         .thenThrow(new DuplicateEmailException("taken@example.com"));
 
-    mockMvc.perform(put("/api/users/1").with(jwt()).contentType(MediaType.APPLICATION_JSON)
+    mockMvc.perform(put("/api/users/1").with(councilJwt()).contentType(MediaType.APPLICATION_JSON)
         .content(objectMapper.writeValueAsString(request))).andExpect(status().isConflict());
   }
 
@@ -160,7 +178,7 @@ class UserControllerTest {
   void activateUserReturnsOk() throws Exception {
     when(userService.activateUser(1L)).thenReturn(userResponse(1L, "a@example.com", true));
 
-    mockMvc.perform(patch("/api/users/1/activate").with(jwt())).andExpect(status().isOk())
+    mockMvc.perform(patch("/api/users/1/activate").with(councilJwt())).andExpect(status().isOk())
         .andExpect(jsonPath("$.active").value(true));
   }
 
@@ -168,7 +186,7 @@ class UserControllerTest {
   void deactivateUserReturnsOk() throws Exception {
     when(userService.deactivateUser(1L)).thenReturn(userResponse(1L, "a@example.com", false));
 
-    mockMvc.perform(patch("/api/users/1/deactivate").with(jwt())).andExpect(status().isOk())
+    mockMvc.perform(patch("/api/users/1/deactivate").with(councilJwt())).andExpect(status().isOk())
         .andExpect(jsonPath("$.active").value(false));
   }
 
@@ -183,6 +201,22 @@ class UserControllerTest {
   @Test
   void unauthenticatedRequestReturnsUnauthorized() throws Exception {
     mockMvc.perform(get("/api/users")).andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void memberCannotCreateUser() throws Exception {
+    Permission memberPermission = new Permission();
+    memberPermission.setRole(Role.MEMBRO_ATIVO);
+    when(permissionRepository.findByUserEmail("member@example.com"))
+        .thenReturn(java.util.Optional.of(memberPermission));
+    mockMvc
+        .perform(
+            post("/api/users").with(jwt().jwt(token -> token.claim("email", "member@example.com")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper
+                    .writeValueAsString(new CreateUserRequest("new@example.com", "New Member",
+                        LocalDate.of(2000, 1, 1), "City", "Address", false, false, false, false))))
+        .andExpect(status().isForbidden());
   }
 
   private UserResponse userResponse(Long id, String email, boolean active) {

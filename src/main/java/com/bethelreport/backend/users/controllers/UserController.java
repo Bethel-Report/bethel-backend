@@ -1,5 +1,6 @@
 package com.bethelreport.backend.users.controllers;
 
+import com.bethelreport.backend.security.annotations.CanManageUsers;
 import com.bethelreport.backend.users.dtos.CreateUserRequest;
 import com.bethelreport.backend.users.dtos.UpdateUserRequest;
 import com.bethelreport.backend.users.dtos.UserResponse;
@@ -26,32 +27,38 @@ public class UserController {
     this.userService = userService;
   }
 
+  @CanManageUsers
   @PostMapping
   public ResponseEntity<UserResponse> createUser(@Valid @RequestBody CreateUserRequest request) {
     return ResponseEntity.status(HttpStatus.CREATED).body(userService.createUser(request));
   }
 
+  @CanManageUsers
   @GetMapping
   public ResponseEntity<List<UserResponse>> listUsers() {
     return ResponseEntity.ok(userService.listUsers());
   }
 
+  @CanManageUsers
   @GetMapping("/{id}")
   public ResponseEntity<UserResponse> getUserById(@PathVariable Long id) {
     return ResponseEntity.ok(userService.getUserById(id));
   }
 
+  @CanManageUsers
   @PutMapping("/{id}")
   public ResponseEntity<UserResponse> updateUser(@PathVariable Long id,
       @Valid @RequestBody UpdateUserRequest request) {
     return ResponseEntity.ok(userService.updateUser(id, request));
   }
 
+  @CanManageUsers
   @PatchMapping("/{id}/activate")
   public ResponseEntity<UserResponse> activateUser(@PathVariable Long id) {
     return ResponseEntity.ok(userService.activateUser(id));
   }
 
+  @CanManageUsers
   @PatchMapping("/{id}/deactivate")
   public ResponseEntity<UserResponse> deactivateUser(@PathVariable Long id) {
     return ResponseEntity.ok(userService.deactivateUser(id));

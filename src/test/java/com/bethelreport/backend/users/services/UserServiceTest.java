@@ -1,4 +1,4 @@
-package com.bethelreport.backend.services;
+package com.bethelreport.backend.users.services;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -19,16 +19,25 @@ import com.bethelreport.backend.exceptions.UserNotFoundException;
 import com.bethelreport.backend.users.mappers.UserMapper;
 import com.bethelreport.backend.users.mappers.UserMapperImpl;
 import com.bethelreport.backend.users.repositories.UserRepository;
+import com.bethelreport.backend.permissions.services.AuthorizationService;
+import com.bethelreport.backend.permissions.services.PermissionService;
+import org.mockito.Mockito;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
-import com.bethelreport.backend.users.services.UserService;
 import org.junit.jupiter.api.Test;
 
 class UserServiceTest {
   private final UserRepository userRepository = mock(UserRepository.class);
   private final UserMapper userMapper = new UserMapperImpl();
-  private final UserService userService = new UserService(userRepository, userMapper);
+  private final PermissionService permissionService = mock(PermissionService.class);
+  private final AuthorizationService authorizationService = mock(AuthorizationService.class);
+  private final UserService userService = new UserService(userRepository, userMapper,
+      permissionService, authorizationService);
+
+  {
+    when(authorizationService.canAssignRole(any(), any(), any())).thenReturn(true);
+  }
 
   @Test
   void createsUserSuccessfully() {
@@ -159,6 +168,7 @@ class UserServiceTest {
     UserResponse response = userService.deactivateUser(1L);
 
     assertFalse(response.active());
+    Mockito.verify(permissionService).deactivateByUserId(1L);
   }
 
   @Test
