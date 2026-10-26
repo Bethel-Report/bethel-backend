@@ -5,6 +5,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -23,6 +25,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -90,6 +93,29 @@ class PermissionControllerTest {
         .contentType(MediaType.APPLICATION_JSON).content("""
             {"userId":2,"role":"MEMBRO_ATIVO","bethelId":10}
             """)).andExpect(status().isForbidden());
+  }
+
+  @Test
+  void councilCannotMovePermissionToAnotherBethelOverHttp() throws Exception {
+    when(permissionService.update(any(Long.class), any()))
+        .thenThrow(new AccessDeniedException("Você não tem permissão para gerenciar este perfil"));
+
+    mockMvc
+        .perform(put("/api/permissions/2").with(jwtFor("council@example.com"))
+            .contentType(MediaType.APPLICATION_JSON).content("""
+                {"role":"MEMBRO_ATIVO","bethelId":20}
+                """))
+        .andExpect(status().isForbidden()).andExpect(jsonPath("$.error").value("Forbidden"));
+  }
+
+  @Test
+  void councilCannotDeletePermissionFromAnotherBethelOverHttp() throws Exception {
+    org.mockito.Mockito
+        .doThrow(new AccessDeniedException("Você não tem permissão para gerenciar este perfil"))
+        .when(permissionService).delete(2L);
+
+    mockMvc.perform(delete("/api/permissions/2").with(jwtFor("council@example.com")))
+        .andExpect(status().isForbidden()).andExpect(jsonPath("$.error").value("Forbidden"));
   }
 
   private org.springframework.test.web.servlet.request.RequestPostProcessor jwtFor(String email) {

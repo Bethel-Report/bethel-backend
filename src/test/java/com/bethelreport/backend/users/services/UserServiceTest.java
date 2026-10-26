@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.eq;
 
 import com.bethelreport.backend.permissions.repositories.PermissionRepository;
+import com.bethelreport.backend.exceptions.UserNotFoundException;
 import com.bethelreport.backend.users.dtos.CreateUserRequest;
 import com.bethelreport.backend.users.dtos.UpdateUserRequest;
 import com.bethelreport.backend.users.dtos.UserResponse;
@@ -32,7 +33,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
-import jakarta.persistence.EntityNotFoundException;
+import org.springframework.security.access.AccessDeniedException;
 
 class UserServiceTest {
   private final UserRepository userRepository = mock(UserRepository.class);
@@ -41,7 +42,7 @@ class UserServiceTest {
   private final AuthorizationService authorizationService = mock(AuthorizationService.class);
   private final PermissionRepository permissionRepository = mock(PermissionRepository.class);
   private final UserService userService = new UserService(userRepository, userMapper,
-      permissionService, authorizationService, permissionRepository);
+      permissionService, authorizationService);
   private final Authentication authentication = authentication("council@example.com");
 
   @BeforeEach
@@ -115,7 +116,19 @@ class UserServiceTest {
   void getUserByIdThrowsWhenNotFound() {
     when(userRepository.findById(99L)).thenReturn(Optional.empty());
 
-    assertThrows(EntityNotFoundException.class, () -> userService.getUserById(99L, authentication));
+    assertThrows(UserNotFoundException.class, () -> userService.getUserById(99L, authentication));
+    verify(authorizationService, never()).canManageUsers(authentication, 99L);
+  }
+
+  @Test
+  void deniesManagingUserFromAnotherBethel() {
+    when(userRepository.findById(20L))
+        .thenReturn(Optional.of(buildUser(20L, "another@example.com", true)));
+    when(authorizationService.canManageUsers(authentication, 20L)).thenReturn(false);
+
+    assertThrows(AccessDeniedException.class, () -> userService.getUserById(20L, authentication));
+    verify(userRepository).findById(20L);
+    verify(authorizationService).canManageUsers(authentication, 20L);
   }
 
   @Test
@@ -191,15 +204,14 @@ class UserServiceTest {
   void activateThrowsWhenUserNotFound() {
     when(userRepository.findById(99L)).thenReturn(Optional.empty());
 
-    assertThrows(EntityNotFoundException.class,
-        () -> userService.activateUser(99L, authentication));
+    assertThrows(UserNotFoundException.class, () -> userService.activateUser(99L, authentication));
   }
 
   @Test
   void deactivateThrowsWhenUserNotFound() {
     when(userRepository.findById(99L)).thenReturn(Optional.empty());
 
-    assertThrows(EntityNotFoundException.class,
+    assertThrows(UserNotFoundException.class,
         () -> userService.deactivateUser(99L, authentication));
   }
 
