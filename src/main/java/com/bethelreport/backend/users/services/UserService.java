@@ -34,7 +34,6 @@ public class UserService {
   }
 
   public UserResponse createUser(CreateUserRequest request) {
-    requireCanAssignRole(Role.CONSELHO_DE_BETHEL, null);
     if (userRepository.existsByEmailIgnoreCase(request.email())) {
       throw new DuplicateEmailException(request.email());
     }
