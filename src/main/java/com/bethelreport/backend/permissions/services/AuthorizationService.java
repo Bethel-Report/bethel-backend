@@ -1,8 +1,8 @@
-package com.bethelreport.backend.security;
+package com.bethelreport.backend.permissions.services;
 
-import com.bethelreport.backend.users.entities.Permission;
-import com.bethelreport.backend.users.entities.Role;
-import com.bethelreport.backend.users.repositories.PermissionRepository;
+import com.bethelreport.backend.permissions.entities.Permission;
+import com.bethelreport.backend.permissions.entities.Role;
+import com.bethelreport.backend.permissions.repositories.PermissionRepository;
 import java.util.Arrays;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;

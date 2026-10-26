@@ -1,10 +1,10 @@
-package com.bethelreport.backend.users.controllers;
+package com.bethelreport.backend.permissions.controllers;
 
+import com.bethelreport.backend.permissions.dtos.CreatePermissionRequest;
+import com.bethelreport.backend.permissions.dtos.PermissionResponse;
+import com.bethelreport.backend.permissions.dtos.UpdatePermissionRequest;
+import com.bethelreport.backend.permissions.services.PermissionService;
 import com.bethelreport.backend.security.annotations.CanManageUsers;
-import com.bethelreport.backend.users.dtos.CreatePermissionRequest;
-import com.bethelreport.backend.users.dtos.PermissionResponse;
-import com.bethelreport.backend.users.dtos.UpdatePermissionRequest;
-import com.bethelreport.backend.users.services.PermissionService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

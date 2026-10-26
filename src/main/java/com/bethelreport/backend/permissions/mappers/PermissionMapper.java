@@ -1,9 +1,9 @@
-package com.bethelreport.backend.users.mappers;
+package com.bethelreport.backend.permissions.mappers;
 
-import com.bethelreport.backend.users.dtos.CreatePermissionRequest;
-import com.bethelreport.backend.users.dtos.PermissionResponse;
-import com.bethelreport.backend.users.dtos.UpdatePermissionRequest;
-import com.bethelreport.backend.users.entities.Permission;
+import com.bethelreport.backend.permissions.dtos.CreatePermissionRequest;
+import com.bethelreport.backend.permissions.dtos.PermissionResponse;
+import com.bethelreport.backend.permissions.dtos.UpdatePermissionRequest;
+import com.bethelreport.backend.permissions.entities.Permission;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;

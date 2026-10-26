@@ -1,13 +1,13 @@
 package com.bethelreport.backend.bethel.controllers;
 
 import com.bethelreport.backend.config.SecurityConfig;
-import com.bethelreport.backend.security.AuthorizationService;
+import com.bethelreport.backend.permissions.services.AuthorizationService;
 import com.bethelreport.backend.bethel.dtos.BethelResponse;
 import com.bethelreport.backend.bethel.services.BethelService;
 import com.bethelreport.backend.bethel.entities.Bethel;
-import com.bethelreport.backend.users.entities.Permission;
-import com.bethelreport.backend.users.entities.Role;
-import com.bethelreport.backend.users.repositories.PermissionRepository;
+import com.bethelreport.backend.permissions.entities.Permission;
+import com.bethelreport.backend.permissions.entities.Role;
+import com.bethelreport.backend.permissions.repositories.PermissionRepository;
 import com.bethelreport.backend.users.services.AdmissionService;
 import java.time.LocalDate;
 import java.util.List;

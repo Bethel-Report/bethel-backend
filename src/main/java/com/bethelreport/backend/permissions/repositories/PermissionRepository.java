@@ -1,6 +1,6 @@
-package com.bethelreport.backend.users.repositories;
+package com.bethelreport.backend.permissions.repositories;
 
-import com.bethelreport.backend.users.entities.Permission;
+import com.bethelreport.backend.permissions.entities.Permission;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 

@@ -1,16 +1,15 @@
-package com.bethelreport.backend.users.services;
+package com.bethelreport.backend.permissions.services;
 
 import com.bethelreport.backend.bethel.entities.Bethel;
 import com.bethelreport.backend.bethel.repositories.BethelRepository;
-import com.bethelreport.backend.security.AuthorizationService;
-import com.bethelreport.backend.users.dtos.CreatePermissionRequest;
-import com.bethelreport.backend.users.dtos.PermissionResponse;
-import com.bethelreport.backend.users.dtos.UpdatePermissionRequest;
-import com.bethelreport.backend.users.entities.Permission;
-import com.bethelreport.backend.users.entities.Role;
+import com.bethelreport.backend.permissions.dtos.CreatePermissionRequest;
+import com.bethelreport.backend.permissions.dtos.PermissionResponse;
+import com.bethelreport.backend.permissions.dtos.UpdatePermissionRequest;
+import com.bethelreport.backend.permissions.entities.Permission;
+import com.bethelreport.backend.permissions.entities.Role;
+import com.bethelreport.backend.permissions.mappers.PermissionMapper;
+import com.bethelreport.backend.permissions.repositories.PermissionRepository;
 import com.bethelreport.backend.users.entities.User;
-import com.bethelreport.backend.users.mappers.PermissionMapper;
-import com.bethelreport.backend.users.repositories.PermissionRepository;
 import com.bethelreport.backend.users.repositories.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;

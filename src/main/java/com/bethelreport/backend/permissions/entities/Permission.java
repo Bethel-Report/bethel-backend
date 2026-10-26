@@ -1,6 +1,7 @@
-package com.bethelreport.backend.users.entities;
+package com.bethelreport.backend.permissions.entities;
 
 import com.bethelreport.backend.bethel.entities.Bethel;
+import com.bethelreport.backend.users.entities.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

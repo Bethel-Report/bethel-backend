@@ -1,13 +1,13 @@
-package com.bethelreport.backend.security;
+package com.bethelreport.backend.permissions.services;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.lenient;
 
 import com.bethelreport.backend.bethel.entities.Bethel;
-import com.bethelreport.backend.users.entities.Permission;
-import com.bethelreport.backend.users.entities.Role;
-import com.bethelreport.backend.users.repositories.PermissionRepository;
+import com.bethelreport.backend.permissions.entities.Permission;
+import com.bethelreport.backend.permissions.entities.Role;
+import com.bethelreport.backend.permissions.repositories.PermissionRepository;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
