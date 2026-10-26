@@ -89,7 +89,7 @@ public class BethelService {
 
   @Transactional
   public BethelResponse activate(Long id) {
-    requireCanAssignRole(Role.CONSELHO_DE_BETHEL, id);
+    requireGrandeConselho();
 
     Bethel bethel = getBethelOrThrow(id);
     bethel.setActive(true);
@@ -99,7 +99,7 @@ public class BethelService {
 
   @Transactional
   public BethelResponse deactivate(Long id) {
-    requireCanAssignRole(Role.CONSELHO_DE_BETHEL, id);
+    requireGrandeConselho();
 
     Bethel bethel = getBethelOrThrow(id);
     bethel.setActive(false);
@@ -130,6 +130,13 @@ public class BethelService {
     if (!authorizationService.canAssignRole(SecurityContextHolder.getContext().getAuthentication(),
         role, bethelId)) {
       throw new AccessDeniedException("Você não tem permissão para gerenciar este Bethel");
+    }
+  }
+
+  private void requireGrandeConselho() {
+    if (!authorizationService
+        .isGrandeConselho(SecurityContextHolder.getContext().getAuthentication())) {
+      throw new AccessDeniedException("Apenas o Grande Conselho pode gerenciar este Bethel");
     }
   }
 }
