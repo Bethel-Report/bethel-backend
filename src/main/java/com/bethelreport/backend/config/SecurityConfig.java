@@ -1,7 +1,9 @@
 package com.bethelreport.backend.config;
 
 import com.bethelreport.backend.users.services.AdmissionService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authorization.AuthorizationDecision;
@@ -42,20 +44,30 @@ public class SecurityConfig {
 
               return new AuthorizationDecision(admitted);
             }))
-        .exceptionHandling(
-            exception -> exception.authenticationEntryPoint((request, response, ex) -> {
-              response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-              response.setContentType("application/json");
-              response.getWriter().write("{\"status\":401," + "\"error\":\"Unauthorized\","
-                  + "\"message\":\"Autenticação necessária.\"}");
-            }).accessDeniedHandler((request, response, ex) -> {
-              response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-              response.setContentType("application/json");
-              response.getWriter().write("{\"status\":403," + "\"error\":\"Forbidden\","
-                  + "\"message\":\"Acesso não permitido.\"}");
-            }))
-        .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
+        .exceptionHandling(exception -> exception.authenticationEntryPoint(this::writeUnauthorized)
+            .accessDeniedHandler(this::writeForbidden))
+        .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults())
+            .authenticationEntryPoint(this::writeUnauthorized)
+            .accessDeniedHandler(this::writeForbidden));
 
     return http.build();
+  }
+
+  @SuppressWarnings("PMD.UnusedFormalParameter")
+  private void writeUnauthorized(HttpServletRequest request, HttpServletResponse response,
+      org.springframework.security.core.AuthenticationException exception) throws IOException {
+    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+    response.setContentType("application/json");
+    response.getWriter().write("{\"status\":401,\"error\":\"Unauthorized\","
+        + "\"message\":\"Autenticação necessária.\"}");
+  }
+
+  @SuppressWarnings("PMD.UnusedFormalParameter")
+  private void writeForbidden(HttpServletRequest request, HttpServletResponse response,
+      org.springframework.security.access.AccessDeniedException exception) throws IOException {
+    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+    response.setContentType("application/json");
+    response.getWriter().write(
+        "{\"status\":403,\"error\":\"Forbidden\"," + "\"message\":\"Acesso não permitido.\"}");
   }
 }
