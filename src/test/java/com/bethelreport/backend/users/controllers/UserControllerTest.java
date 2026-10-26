@@ -34,6 +34,9 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.oauth2.jwt.BadJwtException;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.ObjectMapper;
@@ -56,6 +59,9 @@ class UserControllerTest {
 
   @MockitoBean
   private PermissionRepository permissionRepository;
+
+  @MockitoBean
+  private JwtDecoder jwtDecoder;
 
   @BeforeEach
   void setUp() {
@@ -206,7 +212,74 @@ class UserControllerTest {
 
   @Test
   void unauthenticatedRequestReturnsUnauthorized() throws Exception {
-    mockMvc.perform(get("/api/users")).andExpect(status().isUnauthorized());
+    mockMvc.perform(get("/api/users")).andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.error").value("Unauthorized"))
+        .andExpect(jsonPath("$.message").value("Autenticação necessária."));
+  }
+
+  @Test
+  void invalidJwtReturnsUnauthorized() throws Exception {
+    when(jwtDecoder.decode("invalid-token")).thenThrow(new BadJwtException("Token inválido"));
+
+    mockMvc.perform(get("/api/users").header("Authorization", "Bearer invalid-token"))
+        .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.error").value("Unauthorized"))
+        .andExpect(jsonPath("$.message").value("Autenticação necessária."));
+  }
+
+  @Test
+  void grandCouncilCanReadAnyUser() throws Exception {
+    Permission grandCouncilPermission = new Permission();
+    grandCouncilPermission.setRole(Role.GRANDE_CONSELHO);
+    when(permissionRepository.findByUserEmail("gc@example.com"))
+        .thenReturn(java.util.Optional.of(grandCouncilPermission));
+    when(userService.getUserById(eq(999L), any(Authentication.class)))
+        .thenReturn(userResponse(999L, "any-bethel@example.com", true));
+
+    mockMvc
+        .perform(
+            get("/api/users/999").with(jwt().jwt(token -> token.claim("email", "gc@example.com"))))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.email").value("any-bethel@example.com"));
+  }
+
+  @Test
+  void memberCannotListUsers() throws Exception {
+    Permission memberPermission = new Permission();
+    memberPermission.setRole(Role.MEMBRO_ATIVO);
+    when(permissionRepository.findByUserEmail("member@example.com"))
+        .thenReturn(java.util.Optional.of(memberPermission));
+
+    mockMvc
+        .perform(
+            get("/api/users").with(jwt().jwt(token -> token.claim("email", "member@example.com"))))
+        .andExpect(status().isForbidden()).andExpect(jsonPath("$.error").value("Forbidden"));
+  }
+
+  @Test
+  void inactivePermissionCannotListUsers() throws Exception {
+    Permission inactivePermission = new Permission();
+    inactivePermission.setRole(Role.CONSELHO_DE_BETHEL);
+    inactivePermission.setActive(false);
+    when(permissionRepository.findByUserEmail("inactive@example.com"))
+        .thenReturn(java.util.Optional.of(inactivePermission));
+
+    mockMvc
+        .perform(get("/api/users")
+            .with(jwt().jwt(token -> token.claim("email", "inactive@example.com"))))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.message").value("Acesso não permitido."));
+  }
+
+  @Test
+  void councilCannotUpdateUserFromAnotherBethel() throws Exception {
+    UpdateUserRequest request = new UpdateUserRequest("updated@example.com", "Updated",
+        LocalDate.of(1995, 5, 5), "New City", "New Addr", true, false, true, false);
+    when(userService.updateUser(eq(2L), any(UpdateUserRequest.class), any(Authentication.class)))
+        .thenThrow(new AccessDeniedException("Você não pode administrar este usuário."));
+
+    mockMvc
+        .perform(put("/api/users/2").with(councilJwt()).contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isForbidden()).andExpect(jsonPath("$.error").value("Forbidden"));
   }
 
   @Test

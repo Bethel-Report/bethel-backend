@@ -116,6 +116,38 @@ class PermissionServiceTest {
   }
 
   @Test
+  void councilCannotMovePermissionToAnotherBethel() {
+    Permission permission = new Permission();
+    permission.setId(2L);
+    permission.setRole(Role.MEMBRO_ATIVO);
+    permission.setBethel(bethel);
+    when(permissionRepository.findById(2L)).thenReturn(Optional.of(permission));
+    Bethel otherBethel = new Bethel();
+    otherBethel.setId(20L);
+    when(bethelRepository.findById(20L)).thenReturn(Optional.of(otherBethel));
+    when(authorizationService.canAssignRole(any(), any(), any())).thenReturn(true, false);
+
+    assertThrows(AccessDeniedException.class,
+        () -> permissionService.update(2L, new UpdatePermissionRequest(Role.MEMBRO_ATIVO, 20L)));
+    verify(permissionRepository, never()).save(any(Permission.class));
+  }
+
+  @Test
+  void councilCannotDeletePermissionFromAnotherBethel() {
+    Permission permission = new Permission();
+    permission.setId(2L);
+    permission.setRole(Role.MEMBRO_ATIVO);
+    Bethel otherBethel = new Bethel();
+    otherBethel.setId(20L);
+    permission.setBethel(otherBethel);
+    when(permissionRepository.findById(2L)).thenReturn(Optional.of(permission));
+    when(authorizationService.canAssignRole(any(), any(), any())).thenReturn(false);
+
+    assertThrows(AccessDeniedException.class, () -> permissionService.delete(2L));
+    verify(permissionRepository, never()).delete(any(Permission.class));
+  }
+
+  @Test
   void activatesPermission() {
     Permission permission = new Permission();
     permission.setId(1L);
