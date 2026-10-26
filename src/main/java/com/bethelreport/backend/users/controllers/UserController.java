@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -41,26 +42,29 @@ public class UserController {
 
   @CanManageUsers
   @GetMapping("/{id}")
-  public ResponseEntity<UserResponse> getUserById(@PathVariable Long id) {
-    return ResponseEntity.ok(userService.getUserById(id));
+  public ResponseEntity<UserResponse> getUserById(@PathVariable Long id,
+      Authentication authentication) {
+    return ResponseEntity.ok(userService.getUserById(id, authentication));
   }
 
   @CanManageUsers
   @PutMapping("/{id}")
   public ResponseEntity<UserResponse> updateUser(@PathVariable Long id,
-      @Valid @RequestBody UpdateUserRequest request) {
-    return ResponseEntity.ok(userService.updateUser(id, request));
+      @Valid @RequestBody UpdateUserRequest request, Authentication authentication) {
+    return ResponseEntity.ok(userService.updateUser(id, request, authentication));
   }
 
   @CanManageUsers
   @PatchMapping("/{id}/activate")
-  public ResponseEntity<UserResponse> activateUser(@PathVariable Long id) {
-    return ResponseEntity.ok(userService.activateUser(id));
+  public ResponseEntity<UserResponse> activateUser(@PathVariable Long id,
+      Authentication authentication) {
+    return ResponseEntity.ok(userService.activateUser(id, authentication));
   }
 
   @CanManageUsers
   @PatchMapping("/{id}/deactivate")
-  public ResponseEntity<UserResponse> deactivateUser(@PathVariable Long id) {
-    return ResponseEntity.ok(userService.deactivateUser(id));
+  public ResponseEntity<UserResponse> deactivateUser(@PathVariable Long id,
+      Authentication authentication) {
+    return ResponseEntity.ok(userService.deactivateUser(id, authentication));
   }
 }

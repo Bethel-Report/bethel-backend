@@ -103,6 +103,21 @@ class AuthorizationServiceTest {
         authentication("unassigned@example.com")));
   }
 
+  @Test
+  void inactivePermissionCannotAuthorizeUser() {
+    Permission inactivePermission = permission(Role.CONSELHO_DE_BETHEL, COUNCIL_BETHEL_ID);
+    inactivePermission.setActive(false);
+    Authentication inactiveUser = authentication("inactive@example.com");
+    lenient().when(permissionRepository.findByUserEmail("inactive@example.com"))
+        .thenReturn(Optional.of(inactivePermission));
+
+    assertFalse(authorizationService.hasRole(inactiveUser, Role.CONSELHO_DE_BETHEL));
+    assertFalse(authorizationService.canAccessBethel(COUNCIL_BETHEL_ID, inactiveUser));
+    assertFalse(
+        authorizationService.canAssignRole(inactiveUser, Role.MEMBRO_ATIVO, COUNCIL_BETHEL_ID));
+    assertFalse(authorizationService.canManageUsers(inactiveUser));
+  }
+
   private Authentication authentication(String email) {
     Jwt jwt = Jwt.withTokenValue("token").header("alg", "none").claim("email", email).build();
     return new JwtAuthenticationToken(jwt);

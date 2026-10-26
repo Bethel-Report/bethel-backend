@@ -33,6 +33,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.Authentication;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.ObjectMapper;
@@ -123,7 +124,8 @@ class UserControllerTest {
 
   @Test
   void getUserByIdReturnsOk() throws Exception {
-    when(userService.getUserById(1L)).thenReturn(userResponse(1L, "a@example.com", true));
+    when(userService.getUserById(eq(1L), any(Authentication.class)))
+        .thenReturn(userResponse(1L, "a@example.com", true));
 
     mockMvc.perform(get("/api/users/1").with(councilJwt())).andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value(1));
@@ -131,7 +133,8 @@ class UserControllerTest {
 
   @Test
   void getUserByIdNotFoundReturnsNotFound() throws Exception {
-    when(userService.getUserById(99L)).thenThrow(new UserNotFoundException(99L));
+    when(userService.getUserById(eq(99L), any(Authentication.class)))
+        .thenThrow(new UserNotFoundException(99L));
 
     mockMvc.perform(get("/api/users/99").with(councilJwt())).andExpect(status().isNotFound())
         .andExpect(jsonPath("$.message").exists());
@@ -143,7 +146,8 @@ class UserControllerTest {
         LocalDate.of(1995, 5, 5), "New City", "New Addr", true, false, true, false);
     UserResponse response = userResponse(1L, "updated@example.com", true);
 
-    when(userService.updateUser(eq(1L), any(UpdateUserRequest.class))).thenReturn(response);
+    when(userService.updateUser(eq(1L), any(UpdateUserRequest.class), any(Authentication.class)))
+        .thenReturn(response);
 
     mockMvc
         .perform(put("/api/users/1").with(councilJwt()).contentType(MediaType.APPLICATION_JSON)
@@ -167,7 +171,7 @@ class UserControllerTest {
     UpdateUserRequest request = new UpdateUserRequest("taken@example.com", "Name",
         LocalDate.of(1990, 1, 1), "City", "Addr", false, false, false, false);
 
-    when(userService.updateUser(eq(1L), any(UpdateUserRequest.class)))
+    when(userService.updateUser(eq(1L), any(UpdateUserRequest.class), any(Authentication.class)))
         .thenThrow(new DuplicateEmailException("taken@example.com"));
 
     mockMvc.perform(put("/api/users/1").with(councilJwt()).contentType(MediaType.APPLICATION_JSON)
@@ -176,7 +180,8 @@ class UserControllerTest {
 
   @Test
   void activateUserReturnsOk() throws Exception {
-    when(userService.activateUser(1L)).thenReturn(userResponse(1L, "a@example.com", true));
+    when(userService.activateUser(eq(1L), any(Authentication.class)))
+        .thenReturn(userResponse(1L, "a@example.com", true));
 
     mockMvc.perform(patch("/api/users/1/activate").with(councilJwt())).andExpect(status().isOk())
         .andExpect(jsonPath("$.active").value(true));
@@ -184,7 +189,8 @@ class UserControllerTest {
 
   @Test
   void deactivateUserReturnsOk() throws Exception {
-    when(userService.deactivateUser(1L)).thenReturn(userResponse(1L, "a@example.com", false));
+    when(userService.deactivateUser(eq(1L), any(Authentication.class)))
+        .thenReturn(userResponse(1L, "a@example.com", false));
 
     mockMvc.perform(patch("/api/users/1/deactivate").with(councilJwt())).andExpect(status().isOk())
         .andExpect(jsonPath("$.active").value(false));
