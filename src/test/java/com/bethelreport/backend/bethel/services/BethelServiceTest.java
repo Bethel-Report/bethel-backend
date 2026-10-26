@@ -12,6 +12,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.server.ResponseStatusException;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -30,6 +31,7 @@ class BethelServiceTest {
     permissionService = mock(PermissionService.class);
     authorizationService = mock(AuthorizationService.class);
     when(authorizationService.canAssignRole(any(), any(), any())).thenReturn(true);
+    when(authorizationService.isGrandeConselho(any())).thenReturn(true);
     service = new BethelService(repository, permissionService, authorizationService);
   }
 
@@ -199,5 +201,24 @@ class BethelServiceTest {
   void rejectsMissingBethelOnDeactivate() {
     assertStatus(HttpStatus.NOT_FOUND, () -> service.deactivate(999L));
     verify(repository, never()).save(any());
+  }
+
+  @Test
+  void rejectsNonGrandeConselhoOnActivate() {
+    when(authorizationService.isGrandeConselho(any())).thenReturn(false);
+
+    assertThrows(AccessDeniedException.class, () -> service.activate(1L));
+    verify(repository, never()).findById(any());
+    verify(repository, never()).save(any());
+  }
+
+  @Test
+  void rejectsNonGrandeConselhoOnDeactivate() {
+    when(authorizationService.isGrandeConselho(any())).thenReturn(false);
+
+    assertThrows(AccessDeniedException.class, () -> service.deactivate(1L));
+    verify(repository, never()).findById(any());
+    verify(repository, never()).save(any());
+    verifyNoInteractions(permissionService);
   }
 }
