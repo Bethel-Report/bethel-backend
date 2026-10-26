@@ -1,8 +1,8 @@
 package com.bethelreport.backend.users.services;
 
 import com.bethelreport.backend.exceptions.DuplicateEmailException;
+import com.bethelreport.backend.exceptions.UserNotFoundException;
 import com.bethelreport.backend.permissions.entities.Role;
-import com.bethelreport.backend.permissions.repositories.PermissionRepository;
 import com.bethelreport.backend.permissions.services.AuthorizationService;
 import com.bethelreport.backend.permissions.services.PermissionService;
 import com.bethelreport.backend.users.dtos.CreateUserRequest;
@@ -11,7 +11,6 @@ import com.bethelreport.backend.users.dtos.UserResponse;
 import com.bethelreport.backend.users.entities.User;
 import com.bethelreport.backend.users.mappers.UserMapper;
 import com.bethelreport.backend.users.repositories.UserRepository;
-import jakarta.persistence.EntityNotFoundException;
 import java.util.List;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
@@ -25,16 +24,13 @@ public class UserService {
   private final UserMapper userMapper;
   private final PermissionService permissionService;
   private final AuthorizationService authorizationService;
-  private final PermissionRepository permissionRepository;
 
   public UserService(UserRepository userRepository, UserMapper userMapper,
-      PermissionService permissionService, AuthorizationService authorizationService,
-      PermissionRepository permissionRepository) {
+      PermissionService permissionService, AuthorizationService authorizationService) {
     this.userRepository = userRepository;
     this.userMapper = userMapper;
     this.permissionService = permissionService;
     this.authorizationService = authorizationService;
-    this.permissionRepository = permissionRepository;
   }
 
   public UserResponse createUser(CreateUserRequest request) {
@@ -102,13 +98,14 @@ public class UserService {
   }
 
   private User getAuthorizedUser(Long userId, Authentication authentication) {
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new UserNotFoundException(userId));
 
     if (!authorizationService.canManageUsers(authentication, userId)) {
       throw new AccessDeniedException("Você não pode administrar este usuário.");
     }
 
-    return userRepository.findById(userId)
-        .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado."));
+    return user;
   }
 
 }
