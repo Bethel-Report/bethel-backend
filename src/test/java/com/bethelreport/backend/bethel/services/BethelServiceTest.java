@@ -4,12 +4,15 @@ import com.bethelreport.backend.bethel.dtos.BethelResponse;
 import com.bethelreport.backend.bethel.dtos.ValidateBethelRequest;
 import com.bethelreport.backend.bethel.entities.Bethel;
 import com.bethelreport.backend.bethel.repositories.BethelRepository;
+import com.bethelreport.backend.permissions.services.PermissionService;
+import com.bethelreport.backend.permissions.services.AuthorizationService;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.server.ResponseStatusException;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -18,12 +21,18 @@ import static org.mockito.Mockito.*;
 
 class BethelServiceTest {
   private BethelRepository repository;
+  private PermissionService permissionService;
+  private AuthorizationService authorizationService;
   private BethelService service;
 
   @BeforeEach
   void setUp() {
     repository = mock(BethelRepository.class);
-    service = new BethelService(repository);
+    permissionService = mock(PermissionService.class);
+    authorizationService = mock(AuthorizationService.class);
+    when(authorizationService.canAssignRole(any(), any(), any())).thenReturn(true);
+    when(authorizationService.isGrandeConselho(any())).thenReturn(true);
+    service = new BethelService(repository, permissionService, authorizationService);
   }
 
   private ValidateBethelRequest createRequest() {
@@ -179,6 +188,7 @@ class BethelServiceTest {
     saveReturnsArgument();
     assertFalse(service.deactivate(1L).active());
     verify(repository).save(original);
+    verify(permissionService).deactivateByBethelId(1L);
   }
 
   @Test
@@ -191,5 +201,24 @@ class BethelServiceTest {
   void rejectsMissingBethelOnDeactivate() {
     assertStatus(HttpStatus.NOT_FOUND, () -> service.deactivate(999L));
     verify(repository, never()).save(any());
+  }
+
+  @Test
+  void rejectsNonGrandeConselhoOnActivate() {
+    when(authorizationService.isGrandeConselho(any())).thenReturn(false);
+
+    assertThrows(AccessDeniedException.class, () -> service.activate(1L));
+    verify(repository, never()).findById(any());
+    verify(repository, never()).save(any());
+  }
+
+  @Test
+  void rejectsNonGrandeConselhoOnDeactivate() {
+    when(authorizationService.isGrandeConselho(any())).thenReturn(false);
+
+    assertThrows(AccessDeniedException.class, () -> service.deactivate(1L));
+    verify(repository, never()).findById(any());
+    verify(repository, never()).save(any());
+    verifyNoInteractions(permissionService);
   }
 }
