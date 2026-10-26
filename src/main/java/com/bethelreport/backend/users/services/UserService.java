@@ -2,12 +2,13 @@ package com.bethelreport.backend.users.services;
 
 import com.bethelreport.backend.exceptions.DuplicateEmailException;
 import com.bethelreport.backend.exceptions.UserNotFoundException;
-import com.bethelreport.backend.security.AuthorizationService;
+import com.bethelreport.backend.permissions.dtos.PermissionResponse;
+import com.bethelreport.backend.permissions.entities.Role;
+import com.bethelreport.backend.permissions.services.AuthorizationService;
+import com.bethelreport.backend.permissions.services.PermissionService;
 import com.bethelreport.backend.users.dtos.CreateUserRequest;
-import com.bethelreport.backend.users.dtos.PermissionResponse;
 import com.bethelreport.backend.users.dtos.UpdateUserRequest;
 import com.bethelreport.backend.users.dtos.UserResponse;
-import com.bethelreport.backend.users.entities.Role;
 import com.bethelreport.backend.users.entities.User;
 import com.bethelreport.backend.users.mappers.UserMapper;
 import com.bethelreport.backend.users.repositories.UserRepository;

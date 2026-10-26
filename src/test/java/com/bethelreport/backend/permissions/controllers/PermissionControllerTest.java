@@ -1,4 +1,4 @@
-package com.bethelreport.backend.users.controllers;
+package com.bethelreport.backend.permissions.controllers;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
@@ -9,14 +9,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.bethelreport.backend.config.SecurityConfig;
-import com.bethelreport.backend.security.AuthorizationService;
-import com.bethelreport.backend.users.dtos.CreatePermissionRequest;
-import com.bethelreport.backend.users.dtos.PermissionResponse;
-import com.bethelreport.backend.users.entities.Permission;
-import com.bethelreport.backend.users.entities.Role;
-import com.bethelreport.backend.users.repositories.PermissionRepository;
+import com.bethelreport.backend.permissions.services.AuthorizationService;
+import com.bethelreport.backend.permissions.dtos.CreatePermissionRequest;
+import com.bethelreport.backend.permissions.dtos.PermissionResponse;
+import com.bethelreport.backend.permissions.entities.Permission;
+import com.bethelreport.backend.permissions.entities.Role;
+import com.bethelreport.backend.permissions.repositories.PermissionRepository;
 import com.bethelreport.backend.users.services.AdmissionService;
-import com.bethelreport.backend.users.services.PermissionService;
+import com.bethelreport.backend.permissions.services.PermissionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

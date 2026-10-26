@@ -13,11 +13,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.bethelreport.backend.config.SecurityConfig;
-import com.bethelreport.backend.security.AuthorizationService;
+import com.bethelreport.backend.permissions.services.AuthorizationService;
 import com.bethelreport.backend.bethel.entities.Bethel;
-import com.bethelreport.backend.users.entities.Permission;
-import com.bethelreport.backend.users.entities.Role;
-import com.bethelreport.backend.users.repositories.PermissionRepository;
+import com.bethelreport.backend.permissions.entities.Permission;
+import com.bethelreport.backend.permissions.entities.Role;
+import com.bethelreport.backend.permissions.repositories.PermissionRepository;
 import com.bethelreport.backend.users.dtos.CreateUserRequest;
 import com.bethelreport.backend.users.dtos.UpdateUserRequest;
 import com.bethelreport.backend.users.dtos.UserResponse;
