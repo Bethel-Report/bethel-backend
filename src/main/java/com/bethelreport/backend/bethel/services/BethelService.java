@@ -89,7 +89,7 @@ public class BethelService {
 
   @Transactional
   public BethelResponse activate(Long id) {
-    requireCanAssignRole(Role.GRANDE_CONSELHO, id);
+    requireCanAssignRole(Role.CONSELHO_DE_BETHEL, id);
 
     Bethel bethel = getBethelOrThrow(id);
     bethel.setActive(true);
@@ -99,7 +99,7 @@ public class BethelService {
 
   @Transactional
   public BethelResponse deactivate(Long id) {
-    requireCanAssignRole(Role.GRANDE_CONSELHO, id);
+    requireCanAssignRole(Role.CONSELHO_DE_BETHEL, id);
 
     Bethel bethel = getBethelOrThrow(id);
     bethel.setActive(false);
