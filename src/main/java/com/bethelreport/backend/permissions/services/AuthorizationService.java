@@ -4,6 +4,7 @@ import com.bethelreport.backend.permissions.entities.Permission;
 import com.bethelreport.backend.permissions.entities.Role;
 import com.bethelreport.backend.permissions.repositories.PermissionRepository;
 import java.util.Arrays;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
@@ -89,6 +90,42 @@ public class AuthorizationService {
     return hasRole(authentication, Role.GRANDE_CONSELHO, Role.CONSELHO_DE_BETHEL);
   }
 
+  public boolean canManageUsers(Authentication authentication, Long targetUserId) {
+    Permission permission = findPermission(authentication);
+
+    if (permission == null) {
+      return false;
+    }
+
+    if (permission.getRole() == Role.GRANDE_CONSELHO) {
+      return true;
+    }
+
+    if (permission.getRole() != Role.CONSELHO_DE_BETHEL || permission.getBethel() == null) {
+      return false;
+    }
+
+    return permissionRepository.findByUserId(targetUserId)
+        .map(targetPermission -> targetPermission.getBethel() != null
+            && permission.getBethel().getId().equals(targetPermission.getBethel().getId()))
+        .orElse(false);
+  }
+
+  public Long getAuthorizedBethelId(Authentication authentication) {
+
+    Permission permission = findPermission(authentication);
+
+    if (permission == null) {
+      throw new AccessDeniedException("Permissão ativa não encontrada.");
+    }
+
+    if (permission.getRole() != Role.CONSELHO_DE_BETHEL || permission.getBethel() == null) {
+      throw new AccessDeniedException("Usuário não possui acesso administrativo a um Bethel.");
+    }
+
+    return permission.getBethel().getId();
+  }
+
   private Permission findPermission(Authentication authentication) {
 
     if (!(authentication instanceof JwtAuthenticationToken jwtAuth)) {
@@ -101,6 +138,6 @@ public class AuthorizationService {
       return null;
     }
 
-    return permissionRepository.findByUserEmail(email).orElse(null);
+    return permissionRepository.findByUserEmail(email).filter(Permission::isActive).orElse(null);
   }
 }

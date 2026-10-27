@@ -33,6 +33,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.oauth2.jwt.BadJwtException;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.ObjectMapper;
@@ -55,6 +59,9 @@ class UserControllerTest {
 
   @MockitoBean
   private PermissionRepository permissionRepository;
+
+  @MockitoBean
+  private JwtDecoder jwtDecoder;
 
   @BeforeEach
   void setUp() {
@@ -123,7 +130,8 @@ class UserControllerTest {
 
   @Test
   void getUserByIdReturnsOk() throws Exception {
-    when(userService.getUserById(1L)).thenReturn(userResponse(1L, "a@example.com", true));
+    when(userService.getUserById(eq(1L), any(Authentication.class)))
+        .thenReturn(userResponse(1L, "a@example.com", true));
 
     mockMvc.perform(get("/api/users/1").with(councilJwt())).andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value(1));
@@ -131,7 +139,8 @@ class UserControllerTest {
 
   @Test
   void getUserByIdNotFoundReturnsNotFound() throws Exception {
-    when(userService.getUserById(99L)).thenThrow(new UserNotFoundException(99L));
+    when(userService.getUserById(eq(99L), any(Authentication.class)))
+        .thenThrow(new UserNotFoundException(99L));
 
     mockMvc.perform(get("/api/users/99").with(councilJwt())).andExpect(status().isNotFound())
         .andExpect(jsonPath("$.message").exists());
@@ -143,7 +152,8 @@ class UserControllerTest {
         LocalDate.of(1995, 5, 5), "New City", "New Addr", true, false, true, false);
     UserResponse response = userResponse(1L, "updated@example.com", true);
 
-    when(userService.updateUser(eq(1L), any(UpdateUserRequest.class))).thenReturn(response);
+    when(userService.updateUser(eq(1L), any(UpdateUserRequest.class), any(Authentication.class)))
+        .thenReturn(response);
 
     mockMvc
         .perform(put("/api/users/1").with(councilJwt()).contentType(MediaType.APPLICATION_JSON)
@@ -167,7 +177,7 @@ class UserControllerTest {
     UpdateUserRequest request = new UpdateUserRequest("taken@example.com", "Name",
         LocalDate.of(1990, 1, 1), "City", "Addr", false, false, false, false);
 
-    when(userService.updateUser(eq(1L), any(UpdateUserRequest.class)))
+    when(userService.updateUser(eq(1L), any(UpdateUserRequest.class), any(Authentication.class)))
         .thenThrow(new DuplicateEmailException("taken@example.com"));
 
     mockMvc.perform(put("/api/users/1").with(councilJwt()).contentType(MediaType.APPLICATION_JSON)
@@ -176,7 +186,8 @@ class UserControllerTest {
 
   @Test
   void activateUserReturnsOk() throws Exception {
-    when(userService.activateUser(1L)).thenReturn(userResponse(1L, "a@example.com", true));
+    when(userService.activateUser(eq(1L), any(Authentication.class)))
+        .thenReturn(userResponse(1L, "a@example.com", true));
 
     mockMvc.perform(patch("/api/users/1/activate").with(councilJwt())).andExpect(status().isOk())
         .andExpect(jsonPath("$.active").value(true));
@@ -184,7 +195,8 @@ class UserControllerTest {
 
   @Test
   void deactivateUserReturnsOk() throws Exception {
-    when(userService.deactivateUser(1L)).thenReturn(userResponse(1L, "a@example.com", false));
+    when(userService.deactivateUser(eq(1L), any(Authentication.class)))
+        .thenReturn(userResponse(1L, "a@example.com", false));
 
     mockMvc.perform(patch("/api/users/1/deactivate").with(councilJwt())).andExpect(status().isOk())
         .andExpect(jsonPath("$.active").value(false));
@@ -200,7 +212,74 @@ class UserControllerTest {
 
   @Test
   void unauthenticatedRequestReturnsUnauthorized() throws Exception {
-    mockMvc.perform(get("/api/users")).andExpect(status().isUnauthorized());
+    mockMvc.perform(get("/api/users")).andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.error").value("Unauthorized"))
+        .andExpect(jsonPath("$.message").value("Autenticação necessária."));
+  }
+
+  @Test
+  void invalidJwtReturnsUnauthorized() throws Exception {
+    when(jwtDecoder.decode("invalid-token")).thenThrow(new BadJwtException("Token inválido"));
+
+    mockMvc.perform(get("/api/users").header("Authorization", "Bearer invalid-token"))
+        .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.error").value("Unauthorized"))
+        .andExpect(jsonPath("$.message").value("Autenticação necessária."));
+  }
+
+  @Test
+  void grandCouncilCanReadAnyUser() throws Exception {
+    Permission grandCouncilPermission = new Permission();
+    grandCouncilPermission.setRole(Role.GRANDE_CONSELHO);
+    when(permissionRepository.findByUserEmail("gc@example.com"))
+        .thenReturn(java.util.Optional.of(grandCouncilPermission));
+    when(userService.getUserById(eq(999L), any(Authentication.class)))
+        .thenReturn(userResponse(999L, "any-bethel@example.com", true));
+
+    mockMvc
+        .perform(
+            get("/api/users/999").with(jwt().jwt(token -> token.claim("email", "gc@example.com"))))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.email").value("any-bethel@example.com"));
+  }
+
+  @Test
+  void memberCannotListUsers() throws Exception {
+    Permission memberPermission = new Permission();
+    memberPermission.setRole(Role.MEMBRO_ATIVO);
+    when(permissionRepository.findByUserEmail("member@example.com"))
+        .thenReturn(java.util.Optional.of(memberPermission));
+
+    mockMvc
+        .perform(
+            get("/api/users").with(jwt().jwt(token -> token.claim("email", "member@example.com"))))
+        .andExpect(status().isForbidden()).andExpect(jsonPath("$.error").value("Forbidden"));
+  }
+
+  @Test
+  void inactivePermissionCannotListUsers() throws Exception {
+    Permission inactivePermission = new Permission();
+    inactivePermission.setRole(Role.CONSELHO_DE_BETHEL);
+    inactivePermission.setActive(false);
+    when(permissionRepository.findByUserEmail("inactive@example.com"))
+        .thenReturn(java.util.Optional.of(inactivePermission));
+
+    mockMvc
+        .perform(get("/api/users")
+            .with(jwt().jwt(token -> token.claim("email", "inactive@example.com"))))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.message").value("Acesso não permitido."));
+  }
+
+  @Test
+  void councilCannotUpdateUserFromAnotherBethel() throws Exception {
+    UpdateUserRequest request = new UpdateUserRequest("updated@example.com", "Updated",
+        LocalDate.of(1995, 5, 5), "New City", "New Addr", true, false, true, false);
+    when(userService.updateUser(eq(2L), any(UpdateUserRequest.class), any(Authentication.class)))
+        .thenThrow(new AccessDeniedException("Você não pode administrar este usuário."));
+
+    mockMvc
+        .perform(put("/api/users/2").with(councilJwt()).contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isForbidden()).andExpect(jsonPath("$.error").value("Forbidden"));
   }
 
   @Test
