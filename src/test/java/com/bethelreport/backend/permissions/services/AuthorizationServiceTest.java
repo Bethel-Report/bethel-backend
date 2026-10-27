@@ -3,6 +3,7 @@ package com.bethelreport.backend.permissions.services;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.when;
 
 import com.bethelreport.backend.bethel.entities.Bethel;
 import com.bethelreport.backend.permissions.entities.Permission;
@@ -101,6 +102,38 @@ class AuthorizationServiceTest {
   void unassignedUserCannotAccessProtectedBethel() {
     assertFalse(authorizationService.canAccessBethel(OTHER_BETHEL_ID,
         authentication("unassigned@example.com")));
+  }
+
+  @Test
+  void inactivePermissionCannotAuthorizeUser() {
+    Permission inactivePermission = permission(Role.CONSELHO_DE_BETHEL, COUNCIL_BETHEL_ID);
+    inactivePermission.setActive(false);
+    Authentication inactiveUser = authentication("inactive@example.com");
+    lenient().when(permissionRepository.findByUserEmail("inactive@example.com"))
+        .thenReturn(Optional.of(inactivePermission));
+
+    assertFalse(authorizationService.hasRole(inactiveUser, Role.CONSELHO_DE_BETHEL));
+    assertFalse(authorizationService.canAccessBethel(COUNCIL_BETHEL_ID, inactiveUser));
+    assertFalse(
+        authorizationService.canAssignRole(inactiveUser, Role.MEMBRO_ATIVO, COUNCIL_BETHEL_ID));
+    assertFalse(authorizationService.canManageUsers(inactiveUser));
+  }
+
+  @Test
+  void councilCanManageUsersWithPermissionInOwnBethelOnly() {
+    when(permissionRepository.findByUserId(1L))
+        .thenReturn(Optional.of(permission(Role.MEMBRO_ATIVO, COUNCIL_BETHEL_ID)));
+    when(permissionRepository.findByUserId(2L))
+        .thenReturn(Optional.of(permission(Role.MEMBRO_ATIVO, OTHER_BETHEL_ID)));
+
+    assertTrue(authorizationService.canManageUsers(council, 1L));
+    assertFalse(authorizationService.canManageUsers(council, 2L));
+  }
+
+  @Test
+  void grandCouncilCanManageUsersFromAnyBethel() {
+    assertTrue(authorizationService.canManageUsers(grandCouncil, 1L));
+    assertTrue(authorizationService.canManageUsers(grandCouncil, 2L));
   }
 
   private Authentication authentication(String email) {
