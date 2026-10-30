@@ -4,11 +4,11 @@ package com.bethelreport.backend.bethel.services;
 import com.bethelreport.backend.bethel.dtos.BethelResponse;
 import com.bethelreport.backend.bethel.dtos.ValidateBethelRequest;
 import com.bethelreport.backend.bethel.entities.Bethel;
+import com.bethelreport.backend.bethel.mappers.BethelMapper;
 import com.bethelreport.backend.bethel.repositories.BethelRepository;
 import com.bethelreport.backend.permissions.entities.Role;
 import com.bethelreport.backend.permissions.services.AuthorizationService;
 import com.bethelreport.backend.permissions.services.PermissionService;
-import java.time.LocalDate;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
@@ -23,12 +23,14 @@ public class BethelService {
   private final BethelRepository bethelRepository;
   private final PermissionService permissionService;
   private final AuthorizationService authorizationService;
+  private final BethelMapper bethelMapper;
 
   public BethelService(BethelRepository bethelRepository, PermissionService permissionService,
-      AuthorizationService authorizationService) {
+      AuthorizationService authorizationService, BethelMapper bethelMapper) {
     this.bethelRepository = bethelRepository;
     this.permissionService = permissionService;
     this.authorizationService = authorizationService;
+    this.bethelMapper = bethelMapper;
   }
 
   @Transactional
@@ -40,14 +42,9 @@ public class BethelService {
           "Já existe um Bethel cadastrado com este número.");
     }
 
-    Bethel bethel = new Bethel();
+    Bethel bethel = bethelMapper.toEntity(request);
 
-    updateFields(bethel, request.number(), request.name(), request.foundationDate(), request.city(),
-        request.address(), request.email(), request.sponsoringLodge());
-
-    bethel.setActive(true);
-
-    return BethelResponse.fromEntity(bethelRepository.save(bethel));
+    return bethelMapper.toResponse(bethelRepository.save(bethel));
   }
 
   @Transactional(readOnly = true)
@@ -61,12 +58,12 @@ public class BethelService {
       bethels = bethelRepository.findAll();
     }
 
-    return bethels.stream().map(BethelResponse::fromEntity).toList();
+    return bethelMapper.toList(bethels);
   }
 
   @Transactional(readOnly = true)
   public BethelResponse findById(Long id) {
-    return BethelResponse.fromEntity(getBethelOrThrow(id));
+    return bethelMapper.toResponse(getBethelOrThrow(id));
   }
 
   @Transactional
@@ -81,10 +78,8 @@ public class BethelService {
           "Já existe um Bethel cadastrado com este número.");
     }
 
-    updateFields(bethel, request.number(), request.name(), request.foundationDate(), request.city(),
-        request.address(), request.email(), request.sponsoringLodge());
-
-    return BethelResponse.fromEntity(bethelRepository.save(bethel));
+    bethelMapper.updateEntity(request, bethel);
+    return bethelMapper.toResponse(bethelRepository.save(bethel));
   }
 
   @Transactional
@@ -94,7 +89,7 @@ public class BethelService {
     Bethel bethel = getBethelOrThrow(id);
     bethel.setActive(true);
 
-    return BethelResponse.fromEntity(bethelRepository.save(bethel));
+    return bethelMapper.toResponse(bethelRepository.save(bethel));
   }
 
   @Transactional
@@ -105,25 +100,13 @@ public class BethelService {
     bethel.setActive(false);
     permissionService.deactivateByBethelId(id);
 
-    return BethelResponse.fromEntity(bethelRepository.save(bethel));
+    return bethelMapper.toResponse(bethelRepository.save(bethel));
   }
 
   private Bethel getBethelOrThrow(Long id) {
 
     return bethelRepository.findById(id).orElseThrow(
         () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Bethel não encontrado."));
-  }
-
-  private void updateFields(Bethel bethel, Integer number, String name, LocalDate foundationDate,
-      String city, String address, String email, String sponsoringLodge) {
-
-    bethel.setNumber(number);
-    bethel.setName(name.trim());
-    bethel.setFoundationDate(foundationDate);
-    bethel.setCity(city.trim());
-    bethel.setAddress(address.trim());
-    bethel.setEmail(email.trim());
-    bethel.setSponsoringLodge(sponsoringLodge.trim());
   }
 
   private void requireCanAssignRole(Role role, Long bethelId) {
