@@ -103,26 +103,25 @@ class BethelServiceTest {
 
   @Test
   void listsAllWhenFilterIsNullOrBlank() {
-    when(repository.findAll()).thenReturn(List.of(entity(1, 12, true), entity(2, 13, false)));
-    assertEquals(2, service.findAll(null).size());
-    assertEquals(2, service.findAll("  ").size());
-    verify(repository, times(2)).findAll();
+    when(repository.findByFilters(null, null))
+        .thenReturn(List.of(entity(1, 12, true), entity(2, 13, false)));
+    assertEquals(2, service.findAll(null, null).size());
+    assertEquals(2, service.findAll("  ", null).size());
+    verify(repository, times(2)).findByFilters(null, null);
     verify(repository, never()).findByNameContainingIgnoreCase(any());
   }
 
   @Test
   void listsByTrimmedName() {
-    when(repository.findByNameContainingIgnoreCase("Lírios"))
-        .thenReturn(List.of(entity(1, 12, true)));
-    assertEquals(1, service.findAll("  Lírios  ").size());
-    verify(repository).findByNameContainingIgnoreCase("Lírios");
-    verify(repository, never()).findAll();
+    when(repository.findByFilters("Lírios", null)).thenReturn(List.of(entity(1, 12, true)));
+    assertEquals(1, service.findAll("  Lírios  ", null).size());
+    verify(repository).findByFilters("Lírios", null);
   }
 
   @Test
   void returnsEmptyListWhenNoMatches() {
-    when(repository.findByNameContainingIgnoreCase("inexistente")).thenReturn(List.of());
-    assertTrue(service.findAll("inexistente").isEmpty());
+    when(repository.findByFilters("inexistente", null)).thenReturn(List.of());
+    assertTrue(service.findAll("inexistente", null).isEmpty());
   }
 
   @Test

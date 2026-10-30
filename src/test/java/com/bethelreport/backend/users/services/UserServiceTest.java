@@ -11,9 +11,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.eq;
 
-import com.bethelreport.backend.permissions.repositories.PermissionRepository;
 import com.bethelreport.backend.exceptions.UserNotFoundException;
+import com.bethelreport.backend.permissions.entities.Role;
 import com.bethelreport.backend.users.dtos.CreateUserRequest;
+import com.bethelreport.backend.users.dtos.UserFilters;
 import com.bethelreport.backend.users.dtos.UpdateUserRequest;
 import com.bethelreport.backend.users.dtos.UserResponse;
 import com.bethelreport.backend.users.entities.User;
@@ -40,7 +41,6 @@ class UserServiceTest {
   private final UserMapper userMapper = new UserMapperImpl();
   private final PermissionService permissionService = mock(PermissionService.class);
   private final AuthorizationService authorizationService = mock(AuthorizationService.class);
-  private final PermissionRepository permissionRepository = mock(PermissionRepository.class);
   private final UserService userService = new UserService(userRepository, userMapper,
       permissionService, authorizationService);
   private final Authentication authentication = authentication("council@example.com");
@@ -50,8 +50,7 @@ class UserServiceTest {
     SecurityContextHolder.getContext().setAuthentication(authentication);
     when(authorizationService.canManageUsers(eq(authentication), any(Long.class))).thenReturn(true);
     when(authorizationService.isGrandeConselho(authentication)).thenReturn(false);
-    when(authorizationService.hasRole(authentication,
-        com.bethelreport.backend.permissions.entities.Role.CONSELHO_DE_BETHEL)).thenReturn(true);
+    when(authorizationService.hasRole(authentication, Role.CONSELHO_DE_BETHEL)).thenReturn(true);
     when(authorizationService.getAuthorizedBethelId(authentication)).thenReturn(10L);
   }
 
@@ -91,14 +90,44 @@ class UserServiceTest {
   }
 
   @Test
-  void listsAllUsers() {
+  void councilFiltersUsersOnlyWithinAuthorizedBethel() {
     User user = buildUser(1L, "a@example.com", true);
-    when(userRepository.findAllByBethelId(10L)).thenReturn(List.of(user));
+    when(userRepository.searchUsers("a@example.com", 10L, true, Role.MEMBRO_ATIVO))
+        .thenReturn(List.of(user));
 
-    List<UserResponse> result = userService.listUsers();
+    UserFilters filters = new UserFilters(" a@example.com ", 99L, true, Role.MEMBRO_ATIVO);
+    List<UserResponse> result = userService.listUsers(filters);
 
     assertEquals(1, result.size());
     assertEquals("a@example.com", result.getFirst().email());
+    verify(userRepository).searchUsers("a@example.com", 10L, true, Role.MEMBRO_ATIVO);
+  }
+
+  @Test
+  void grandCouncilCanApplyFiltersAcrossAllBethels() {
+    when(authorizationService.isGrandeConselho(authentication)).thenReturn(true);
+    User user = buildUser(1L, "gc@example.com", false);
+    when(userRepository.searchUsers("gc@example.com", 20L, false, Role.CONSELHO_DE_BETHEL))
+        .thenReturn(List.of(user));
+
+    List<UserResponse> result = userService
+        .listUsers(new UserFilters("gc@example.com", 20L, false, Role.CONSELHO_DE_BETHEL));
+
+    assertEquals(1, result.size());
+    assertEquals("gc@example.com", result.getFirst().email());
+    verify(userRepository).searchUsers("gc@example.com", 20L, false, Role.CONSELHO_DE_BETHEL);
+  }
+
+  @Test
+  void grandCouncilCanListUsersWithoutBethelScope() {
+    when(authorizationService.isGrandeConselho(authentication)).thenReturn(true);
+    User user = buildUser(1L, "any@example.com", true);
+    when(userRepository.searchUsers(null, null, null, null)).thenReturn(List.of(user));
+
+    List<UserResponse> result = userService.listUsers(null);
+
+    assertEquals(1, result.size());
+    verify(userRepository).searchUsers(null, null, null, null);
   }
 
   @Test
