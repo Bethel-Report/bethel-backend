@@ -48,17 +48,9 @@ public class BethelService {
   }
 
   @Transactional(readOnly = true)
-  public List<BethelResponse> findAll(String name) {
-
-    List<Bethel> bethels;
-
-    if (name != null && !name.isBlank()) {
-      bethels = bethelRepository.findByNameContainingIgnoreCase(name.trim());
-    } else {
-      bethels = bethelRepository.findAll();
-    }
-
-    return bethelMapper.toList(bethels);
+  public List<BethelResponse> findAll(String name, Boolean active) {
+    String normalizedName = name == null || name.isBlank() ? null : name.trim();
+    return bethelMapper.toList(bethelRepository.findByFilters(normalizedName, active));
   }
 
   @Transactional(readOnly = true)
