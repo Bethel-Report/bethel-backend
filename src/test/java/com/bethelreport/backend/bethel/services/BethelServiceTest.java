@@ -3,6 +3,7 @@ package com.bethelreport.backend.bethel.services;
 import com.bethelreport.backend.bethel.dtos.BethelResponse;
 import com.bethelreport.backend.bethel.dtos.ValidateBethelRequest;
 import com.bethelreport.backend.bethel.entities.Bethel;
+import com.bethelreport.backend.bethel.mappers.BethelMapper;
 import com.bethelreport.backend.bethel.repositories.BethelRepository;
 import com.bethelreport.backend.permissions.services.PermissionService;
 import com.bethelreport.backend.permissions.services.AuthorizationService;
@@ -14,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.server.ResponseStatusException;
+import org.mapstruct.factory.Mappers;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -24,15 +26,17 @@ class BethelServiceTest {
   private PermissionService permissionService;
   private AuthorizationService authorizationService;
   private BethelService service;
+  private BethelMapper mapper;
 
   @BeforeEach
   void setUp() {
     repository = mock(BethelRepository.class);
     permissionService = mock(PermissionService.class);
     authorizationService = mock(AuthorizationService.class);
+    mapper = Mappers.getMapper(BethelMapper.class);
     when(authorizationService.canAssignRole(any(), any(), any())).thenReturn(true);
     when(authorizationService.isGrandeConselho(any())).thenReturn(true);
-    service = new BethelService(repository, permissionService, authorizationService);
+    service = new BethelService(repository, permissionService, authorizationService, mapper);
   }
 
   private ValidateBethelRequest createRequest() {
