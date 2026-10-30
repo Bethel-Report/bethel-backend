@@ -101,17 +101,17 @@ class BethelControllerTest {
 
   @Test
   void listsBethels() throws Exception {
-    when(service.findAll(null)).thenReturn(List.of(response(true)));
+    when(service.findAll(null, null)).thenReturn(List.of(response(true)));
     mvc.perform(get(BASE).with(admittedJwt())).andExpect(status().isOk())
         .andExpect(jsonPath("$[0].number").value(12));
   }
 
   @Test
   void filtersBethelsByName() throws Exception {
-    when(service.findAll("Lírios")).thenReturn(List.of(response(true)));
+    when(service.findAll("Lírios", null)).thenReturn(List.of(response(true)));
     mvc.perform(get(BASE).param("name", "Lírios").with(admittedJwt())).andExpect(status().isOk())
         .andExpect(jsonPath("$[0].name").value("Lírios do Vale"));
-    verify(service).findAll("Lírios");
+    verify(service).findAll("Lírios", null);
   }
 
   @Test
