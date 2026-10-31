@@ -1,7 +1,9 @@
 package com.bethelreport.backend.exceptions;
 
+import jakarta.persistence.EntityNotFoundException;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -23,6 +25,27 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(AccessDeniedException.class)
   public ResponseEntity<Map<String, Object>> handleAccessDenied(AccessDeniedException ex) {
     return buildSecurityError(HttpStatus.FORBIDDEN, "Forbidden", "Acesso não permitido.");
+  }
+
+  @ExceptionHandler(EntityNotFoundException.class)
+  public ResponseEntity<Map<String, Object>> handleEntityNotFound(EntityNotFoundException ex) {
+    return buildError(HttpStatus.NOT_FOUND, ex.getMessage());
+  }
+
+  @ExceptionHandler(IllegalArgumentException.class)
+  public ResponseEntity<Map<String, Object>> handleInvalidArgument(IllegalArgumentException ex) {
+    return buildError(HttpStatus.BAD_REQUEST, ex.getMessage());
+  }
+
+  @ExceptionHandler(IllegalStateException.class)
+  public ResponseEntity<Map<String, Object>> handleInvalidState(IllegalStateException ex) {
+    return buildError(HttpStatus.CONFLICT, ex.getMessage());
+  }
+
+  @ExceptionHandler(DataIntegrityViolationException.class)
+  public ResponseEntity<Map<String, Object>> handleDataConflict(
+      DataIntegrityViolationException ex) {
+    return buildError(HttpStatus.CONFLICT, "Vínculo duplicado ou conflitante");
   }
 
   @ExceptionHandler(UserNotFoundException.class)
