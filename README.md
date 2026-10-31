@@ -175,3 +175,32 @@ O projeto inclui um workflow do GitHub Actions (`.github/workflows/ci.yml`) que 
 2. Instala dependências do Commitlint
 3. Valida a mensagem do último commit
 4. Executa `./mvnw verify` (compilação + testes + Spotless + Checkstyle + PMD)
+
+
+## BE-08 — Responsáveis administrativos dos Bethéis
+
+O responsável administrativo é um usuário com permissão ativa de perfil
+`CONSELHO_DE_BETHEL`, vinculado a um Bethel. Apenas o `GRANDE_CONSELHO`
+pode atribuir, alterar, remover, ativar ou desativar esse perfil e consultar
+os responsáveis. O Conselho de Bethel continua podendo gerenciar os perfis
+de membros do próprio Bethel, sem promover usuários a responsáveis.
+
+| Operação | Método e rota | Corpo |
+| --- | --- | --- |
+| Associar usuário sem perfil | `POST /api/permissions` | `{"userId":1,"role":"CONSELHO_DE_BETHEL","bethelId":10}` |
+| Alterar vínculo ou promover usuário já cadastrado com perfil | `PUT /api/permissions/{permissionId}` | `{"role":"CONSELHO_DE_BETHEL","bethelId":20}` |
+| Remover vínculo e perfil | `DELETE /api/permissions/{permissionId}` | — |
+| Consultar responsáveis ativos | `GET /api/bethels/{bethelId}/administrators` | — |
+
+A consulta retorna uma lista de `PermissionResponse`, ordenada por ID do vínculo,
+com `id`, `userId`, `role`, `bethelId` e `active`; não inclui permissões ou usuários
+inativos. Um Bethel existente sem responsáveis retorna `[]`.
+
+O modelo mantém um único perfil por usuário: para um usuário que já tenha perfil,
+use a alteração, em vez de criar outro vínculo. A restrição `UNIQUE(user_id)`
+existente no banco também impede duplicidade em requisições concorrentes.
+Usuários e Bethéis inexistentes retornam `404`; alvos inativos retornam `400`;
+vínculos duplicados ou conflitantes retornam `409`. Acesso não autenticado retorna
+`401`, e acesso sem permissão retorna `403`. A criação, alteração e reativação
+administrativa exigem usuário e Bethel ativos. Não há histórico de gestão nesta
+entrega (RF027/RF028 ficam para atividade posterior).

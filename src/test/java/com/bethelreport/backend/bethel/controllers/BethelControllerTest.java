@@ -1,6 +1,8 @@
 package com.bethelreport.backend.bethel.controllers;
 
 import com.bethelreport.backend.config.SecurityConfig;
+import com.bethelreport.backend.permissions.services.PermissionService;
+import com.bethelreport.backend.permissions.dtos.PermissionResponse;
 import com.bethelreport.backend.permissions.services.AuthorizationService;
 import com.bethelreport.backend.bethel.dtos.BethelResponse;
 import com.bethelreport.backend.bethel.services.BethelService;
@@ -32,6 +34,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(BethelController.class)
 @Import({SecurityConfig.class, AuthorizationService.class})
 class BethelControllerTest {
+  @MockitoBean
+  private PermissionService permissionService;
+
   @Autowired
   MockMvc mvc;
   @MockitoBean
@@ -52,6 +57,29 @@ class BethelControllerTest {
         .thenReturn(java.util.Optional.of(permission(Role.CONSELHO_DE_BETHEL, 10L)));
     when(permissionRepository.findByUserEmail("member@example.com"))
         .thenReturn(java.util.Optional.of(permission(Role.MEMBRO_ATIVO, 10L)));
+  }
+
+  @Test
+  void grandCouncilCanListAdministrators() throws Exception {
+    when(permissionService.findAdministratorsByBethelId(10L))
+        .thenReturn(List.of(new PermissionResponse(2L, 1L, Role.CONSELHO_DE_BETHEL, 10L, true)));
+    mvc.perform(get(BASE + "/10/administrators").with(admittedJwt())).andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].userId").value(1));
+  }
+
+  @Test
+  void otherProfilesCannotListAdministrators() throws Exception {
+    for (String email : List.of("council@example.com", "member@example.com")) {
+      mvc.perform(get(BASE + "/10/administrators").with(admittedJwt(email)))
+          .andExpect(status().isForbidden());
+    }
+    verifyNoInteractions(permissionService);
+  }
+
+  @Test
+  void listingAdministratorsRequiresAuthentication() throws Exception {
+    mvc.perform(get(BASE + "/10/administrators")).andExpect(status().isUnauthorized());
+    verifyNoInteractions(permissionService);
   }
 
   private Permission permission(Role role, Long bethelId) {
