@@ -4,6 +4,8 @@ package com.bethelreport.backend.bethel.controllers;
 import com.bethelreport.backend.bethel.dtos.BethelResponse;
 import com.bethelreport.backend.bethel.dtos.ValidateBethelRequest;
 import com.bethelreport.backend.bethel.services.BethelService;
+import com.bethelreport.backend.permissions.dtos.PermissionResponse;
+import com.bethelreport.backend.permissions.services.PermissionService;
 import com.bethelreport.backend.security.annotations.GrandeConselhoOnly;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -25,9 +27,17 @@ import org.springframework.web.bind.annotation.RestController;
 public class BethelController {
 
   private final BethelService bethelService;
+  private final PermissionService permissionService;
 
-  public BethelController(BethelService bethelService) {
+  public BethelController(BethelService bethelService, PermissionService permissionService) {
     this.bethelService = bethelService;
+    this.permissionService = permissionService;
+  }
+
+  @GrandeConselhoOnly
+  @GetMapping("/{id}/administrators")
+  public List<PermissionResponse> findAdministrators(@PathVariable Long id) {
+    return permissionService.findAdministratorsByBethelId(id);
   }
 
   @PostMapping

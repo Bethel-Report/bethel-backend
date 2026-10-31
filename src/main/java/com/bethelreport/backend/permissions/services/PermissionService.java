@@ -43,13 +43,28 @@ public class PermissionService {
       throw new IllegalStateException("O usuário já possui um perfil associado");
     }
 
-    Bethel bethel = validateAndGetBethel(request.role(), request.bethelId());
+    final Bethel bethel = validateAndGetBethel(request.role(), request.bethelId());
 
     Permission permission = permissionMapper.toEntity(request);
     permission.setUser(user);
     permission.setBethel(bethel);
 
     return permissionMapper.toResponse(permissionRepository.save(permission));
+  }
+
+  @Transactional
+  public List<PermissionResponse> findAdministratorsByBethelId(Long bethelId) {
+    if (!authorizationService
+        .isGrandeConselho(SecurityContextHolder.getContext().getAuthentication())) {
+      throw new AccessDeniedException("Apenas o Grande Conselho pode consultar responsáveis");
+    }
+    if (!bethelRepository.existsById(bethelId)) {
+      throw new EntityNotFoundException("Bethel não encontrado");
+    }
+    return permissionRepository
+        .findAllByBethelIdAndRoleAndActiveTrueAndUserActiveTrueOrderByIdAsc(bethelId,
+            Role.CONSELHO_DE_BETHEL)
+        .stream().map(permissionMapper::toResponse).toList();
   }
 
   public PermissionResponse findByUserId(Long userId) {
@@ -70,6 +85,10 @@ public class PermissionService {
     Permission permission = findPermissionOrThrow(permissionId);
     requireCanAssignRole(permission.getRole(), getBethelId(permission));
 
+    if (permission.getRole() == Role.CONSELHO_DE_BETHEL) {
+      validateAdministrator(permission);
+      validateAndGetBethel(permission.getRole(), getBethelId(permission));
+    }
     if (permission.isActive()) {
       throw new IllegalArgumentException("Permissão já ativa");
     } else {
@@ -110,9 +129,12 @@ public class PermissionService {
     Permission permission = findPermissionOrThrow(permissionId);
     requireCanAssignRole(permission.getRole(), getBethelId(permission));
 
-    Bethel bethel = validateAndGetBethel(request.role(), request.bethelId());
+    final Bethel bethel = validateAndGetBethel(request.role(), request.bethelId());
     requireCanAssignRole(request.role(), request.bethelId());
 
+    if (request.role() == Role.CONSELHO_DE_BETHEL) {
+      validateAdministrator(permission);
+    }
     permissionMapper.updateEntity(request, permission);
     permission.setBethel(bethel);
 
@@ -145,8 +167,22 @@ public class PermissionService {
       throw new IllegalArgumentException("Este perfil exige um Bethel");
     }
 
-    return bethelRepository.findById(bethelId)
+    return findActiveBethel(bethelId);
+  }
+
+  private Bethel findActiveBethel(Long bethelId) {
+    Bethel bethel = bethelRepository.findById(bethelId)
         .orElseThrow(() -> new EntityNotFoundException("Bethel não encontrado"));
+    if (!bethel.isActive()) {
+      throw new IllegalArgumentException("Não é possível vincular usuário a Bethel inativo");
+    }
+    return bethel;
+  }
+
+  private void validateAdministrator(Permission permission) {
+    if (!permission.getUser().isActive()) {
+      throw new IllegalArgumentException("Não é possível atribuir perfil a usuário inativo");
+    }
   }
 
   private Permission findPermissionOrThrow(Long permissionId) {
