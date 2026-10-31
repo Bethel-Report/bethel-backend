@@ -2,6 +2,8 @@ package com.bethelreport.backend.users.services;
 
 import com.bethelreport.backend.exceptions.DuplicateEmailException;
 import com.bethelreport.backend.exceptions.UserNotFoundException;
+import com.bethelreport.backend.invitations.entities.InvitationStatus;
+import com.bethelreport.backend.invitations.repositories.InvitationRepository;
 import com.bethelreport.backend.permissions.entities.Role;
 import com.bethelreport.backend.permissions.services.AuthorizationService;
 import com.bethelreport.backend.permissions.services.PermissionService;
@@ -25,21 +27,33 @@ public class UserService {
   private final UserMapper userMapper;
   private final PermissionService permissionService;
   private final AuthorizationService authorizationService;
+  private final InvitationRepository invitationRepository;
 
   public UserService(UserRepository userRepository, UserMapper userMapper,
-      PermissionService permissionService, AuthorizationService authorizationService) {
+      PermissionService permissionService, AuthorizationService authorizationService,
+      InvitationRepository invitationRepository) {
     this.userRepository = userRepository;
     this.userMapper = userMapper;
     this.permissionService = permissionService;
     this.authorizationService = authorizationService;
+    this.invitationRepository = invitationRepository;
   }
 
+  @Transactional
   public UserResponse createUser(CreateUserRequest request) {
     if (userRepository.existsByEmailIgnoreCase(request.email())) {
       throw new DuplicateEmailException(request.email());
     }
     User user = userMapper.toEntity(request);
-    return userMapper.toResponse(userRepository.save(user));
+    UserResponse response = userMapper.toResponse(userRepository.save(user));
+
+    invitationRepository.findByEmailIgnoreCaseAndStatus(request.email(), InvitationStatus.PENDING)
+        .ifPresent(invitation -> {
+          invitation.setStatus(InvitationStatus.ACCEPTED);
+          invitationRepository.save(invitation);
+        });
+
+    return response;
   }
 
   public List<UserResponse> listUsers(UserFilters filter) {
