@@ -85,6 +85,10 @@ public class PermissionService {
     Permission permission = findPermissionOrThrow(permissionId);
     requireCanAssignRole(permission.getRole(), getBethelId(permission));
 
+    if (permission.getRole() == Role.CONSELHO_DE_BETHEL) {
+      validateAdministrator(permission);
+      validateAndGetBethel(permission.getRole(), getBethelId(permission));
+    }
     if (permission.isActive()) {
       throw new IllegalArgumentException("Permissão já ativa");
     } else {
@@ -128,6 +132,9 @@ public class PermissionService {
     final Bethel bethel = validateAndGetBethel(request.role(), request.bethelId());
     requireCanAssignRole(request.role(), request.bethelId());
 
+    if (request.role() == Role.CONSELHO_DE_BETHEL) {
+      validateAdministrator(permission);
+    }
     permissionMapper.updateEntity(request, permission);
     permission.setBethel(bethel);
 
@@ -170,6 +177,12 @@ public class PermissionService {
       throw new IllegalArgumentException("Não é possível vincular usuário a Bethel inativo");
     }
     return bethel;
+  }
+
+  private void validateAdministrator(Permission permission) {
+    if (!permission.getUser().isActive()) {
+      throw new IllegalArgumentException("Não é possível atribuir perfil a usuário inativo");
+    }
   }
 
   private Permission findPermissionOrThrow(Long permissionId) {

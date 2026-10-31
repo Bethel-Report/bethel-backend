@@ -1,6 +1,7 @@
 package com.bethelreport.backend.permissions.services;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -11,6 +12,7 @@ import static org.mockito.Mockito.when;
 import com.bethelreport.backend.bethel.entities.Bethel;
 import com.bethelreport.backend.bethel.repositories.BethelRepository;
 import com.bethelreport.backend.permissions.dtos.CreatePermissionRequest;
+import com.bethelreport.backend.permissions.dtos.UpdatePermissionRequest;
 import com.bethelreport.backend.permissions.entities.Permission;
 import com.bethelreport.backend.permissions.entities.Role;
 import com.bethelreport.backend.permissions.mappers.PermissionMapper;
@@ -87,6 +89,17 @@ class AdministratorServiceTest {
   }
 
   @Test
+  void movesAdministrativeLink() {
+    when(permissions.findById(2L)).thenReturn(Optional.of(existing));
+    Bethel destination = new Bethel();
+    destination.setId(20L);
+    when(bethels.findById(20L)).thenReturn(Optional.of(destination));
+    when(permissions.save(any())).thenAnswer(i -> i.getArgument(0));
+    assertEquals(20L,
+        service.update(2L, new UpdatePermissionRequest(Role.CONSELHO_DE_BETHEL, 20L)).bethelId());
+  }
+
+  @Test
   void rejectsDuplicateLink() {
     when(users.findById(1L)).thenReturn(Optional.of(user));
     when(permissions.existsByUserId(1L)).thenReturn(true);
@@ -125,6 +138,25 @@ class AdministratorServiceTest {
   }
 
   @Test
+  void rejectsMovingToInactiveBethel() {
+    bethel.setActive(false);
+    when(permissions.findById(2L)).thenReturn(Optional.of(existing));
+    when(bethels.findById(10L)).thenReturn(Optional.of(bethel));
+    assertThrows(IllegalArgumentException.class,
+        () -> service.update(2L, new UpdatePermissionRequest(Role.CONSELHO_DE_BETHEL, 10L)));
+    verify(permissions, never()).save(any());
+  }
+
+  @Test
+  void rejectsReactivatingLinkForInactiveUser() {
+    user.setActive(false);
+    existing.setActive(false);
+    when(permissions.findById(2L)).thenReturn(Optional.of(existing));
+    assertThrows(IllegalArgumentException.class, () -> service.activate(2L));
+    assertFalse(existing.isActive());
+  }
+
+  @Test
   void listsActiveAdministrators() {
     when(bethels.existsById(10L)).thenReturn(true);
     when(permissions.findAllByBethelIdAndRoleAndActiveTrueAndUserActiveTrueOrderByIdAsc(10L,
@@ -141,6 +173,17 @@ class AdministratorServiceTest {
   @Test
   void rejectsListingUnknownBethel() {
     assertThrows(EntityNotFoundException.class, () -> service.findAdministratorsByBethelId(10L));
+  }
+
+  @Test
+  void localCouncilCannotPromoteMemberToAdministrator() {
+    actor.setRole(Role.CONSELHO_DE_BETHEL);
+    existing.setRole(Role.MEMBRO_ATIVO);
+    when(permissions.findById(2L)).thenReturn(Optional.of(existing));
+    when(bethels.findById(10L)).thenReturn(Optional.of(bethel));
+    assertThrows(AccessDeniedException.class,
+        () -> service.update(2L, new UpdatePermissionRequest(Role.CONSELHO_DE_BETHEL, 10L)));
+    assertEquals(Role.MEMBRO_ATIVO, existing.getRole());
   }
 
   @Test
