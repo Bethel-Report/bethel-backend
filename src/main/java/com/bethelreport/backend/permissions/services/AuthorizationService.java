@@ -4,6 +4,7 @@ import com.bethelreport.backend.permissions.entities.Permission;
 import com.bethelreport.backend.permissions.entities.Role;
 import com.bethelreport.backend.permissions.repositories.PermissionRepository;
 import java.util.Arrays;
+import java.util.Set;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
@@ -74,7 +75,7 @@ public class AuthorizationService {
           : requestedBethelId != null;
     }
 
-    if (requestedRole == Role.GRANDE_CONSELHO) {
+    if (Set.of(Role.GRANDE_CONSELHO, Role.CONSELHO_DE_BETHEL).contains(requestedRole)) {
       return false;
     }
 
