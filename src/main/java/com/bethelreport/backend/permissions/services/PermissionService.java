@@ -43,7 +43,7 @@ public class PermissionService {
       throw new IllegalStateException("O usuário já possui um perfil associado");
     }
 
-    Bethel bethel = validateAndGetBethel(request.role(), request.bethelId());
+    final Bethel bethel = validateAndGetBethel(request.role(), request.bethelId());
 
     Permission permission = permissionMapper.toEntity(request);
     permission.setUser(user);
@@ -110,7 +110,7 @@ public class PermissionService {
     Permission permission = findPermissionOrThrow(permissionId);
     requireCanAssignRole(permission.getRole(), getBethelId(permission));
 
-    Bethel bethel = validateAndGetBethel(request.role(), request.bethelId());
+    final Bethel bethel = validateAndGetBethel(request.role(), request.bethelId());
     requireCanAssignRole(request.role(), request.bethelId());
 
     permissionMapper.updateEntity(request, permission);
@@ -145,8 +145,16 @@ public class PermissionService {
       throw new IllegalArgumentException("Este perfil exige um Bethel");
     }
 
-    return bethelRepository.findById(bethelId)
+    return findActiveBethel(bethelId);
+  }
+
+  private Bethel findActiveBethel(Long bethelId) {
+    Bethel bethel = bethelRepository.findById(bethelId)
         .orElseThrow(() -> new EntityNotFoundException("Bethel não encontrado"));
+    if (!bethel.isActive()) {
+      throw new IllegalArgumentException("Não é possível vincular usuário a Bethel inativo");
+    }
+    return bethel;
   }
 
   private Permission findPermissionOrThrow(Long permissionId) {
