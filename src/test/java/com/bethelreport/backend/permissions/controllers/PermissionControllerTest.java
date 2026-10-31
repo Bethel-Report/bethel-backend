@@ -118,6 +118,28 @@ class PermissionControllerTest {
         .andExpect(status().isForbidden()).andExpect(jsonPath("$.error").value("Forbidden"));
   }
 
+  @org.junit.jupiter.params.ParameterizedTest
+  @org.junit.jupiter.params.provider.CsvSource({"missing,404", "inactive,400", "duplicate,409",
+      "constraint,409"})
+  void mapsInvalidAdministrativeLinksToHttpErrors(String scenario, int expected) throws Exception {
+    Permission grandCouncil = new Permission();
+    grandCouncil.setRole(Role.GRANDE_CONSELHO);
+    when(permissionRepository.findByUserEmail("gc@example.com"))
+        .thenReturn(java.util.Optional.of(grandCouncil));
+    RuntimeException failure = switch (scenario) {
+      case "missing" -> new jakarta.persistence.EntityNotFoundException("Usuário não encontrado");
+      case "inactive" -> new IllegalArgumentException("Usuário inativo");
+      case "duplicate" -> new IllegalStateException("O usuário já possui um perfil associado");
+      default -> new org.springframework.dao.DataIntegrityViolationException("unique user_id");
+    };
+    when(permissionService.create(any())).thenThrow(failure);
+    mockMvc
+        .perform(post("/api/permissions").with(jwtFor("gc@example.com"))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"userId\":2,\"role\":\"CONSELHO_DE_BETHEL\",\"bethelId\":10}"))
+        .andExpect(status().is(expected));
+  }
+
   private org.springframework.test.web.servlet.request.RequestPostProcessor jwtFor(String email) {
     return jwt().jwt(token -> token.claim("email", email));
   }
