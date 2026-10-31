@@ -52,6 +52,21 @@ public class PermissionService {
     return permissionMapper.toResponse(permissionRepository.save(permission));
   }
 
+  @Transactional
+  public List<PermissionResponse> findAdministratorsByBethelId(Long bethelId) {
+    if (!authorizationService
+        .isGrandeConselho(SecurityContextHolder.getContext().getAuthentication())) {
+      throw new AccessDeniedException("Apenas o Grande Conselho pode consultar responsáveis");
+    }
+    if (!bethelRepository.existsById(bethelId)) {
+      throw new EntityNotFoundException("Bethel não encontrado");
+    }
+    return permissionRepository
+        .findAllByBethelIdAndRoleAndActiveTrueAndUserActiveTrueOrderByIdAsc(bethelId,
+            Role.CONSELHO_DE_BETHEL)
+        .stream().map(permissionMapper::toResponse).toList();
+  }
+
   public PermissionResponse findByUserId(Long userId) {
     Permission permission = permissionRepository.findByUserId(userId)
         .orElseThrow(() -> new EntityNotFoundException("Permissão do usuário não encontrada"));
