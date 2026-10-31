@@ -18,6 +18,7 @@ import com.bethelreport.backend.permissions.repositories.PermissionRepository;
 import com.bethelreport.backend.users.entities.User;
 import com.bethelreport.backend.users.repositories.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -121,6 +122,25 @@ class AdministratorServiceTest {
     when(bethels.findById(10L)).thenReturn(Optional.of(bethel));
     assertThrows(IllegalArgumentException.class, () -> service.create(request()));
     verify(permissions, never()).save(any());
+  }
+
+  @Test
+  void listsActiveAdministrators() {
+    when(bethels.existsById(10L)).thenReturn(true);
+    when(permissions.findAllByBethelIdAndRoleAndActiveTrueAndUserActiveTrueOrderByIdAsc(10L,
+        Role.CONSELHO_DE_BETHEL)).thenReturn(List.of(existing));
+    assertEquals(1L, service.findAdministratorsByBethelId(10L).getFirst().userId());
+  }
+
+  @Test
+  void listsEmptyBethel() {
+    when(bethels.existsById(10L)).thenReturn(true);
+    assertTrue(service.findAdministratorsByBethelId(10L).isEmpty());
+  }
+
+  @Test
+  void rejectsListingUnknownBethel() {
+    assertThrows(EntityNotFoundException.class, () -> service.findAdministratorsByBethelId(10L));
   }
 
   @Test
