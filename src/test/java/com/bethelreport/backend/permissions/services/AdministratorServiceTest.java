@@ -26,6 +26,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mapstruct.factory.Mappers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -97,6 +99,13 @@ class AdministratorServiceTest {
     when(permissions.save(any())).thenAnswer(i -> i.getArgument(0));
     assertEquals(20L,
         service.update(2L, new UpdatePermissionRequest(Role.CONSELHO_DE_BETHEL, 20L)).bethelId());
+  }
+
+  @Test
+  void removesAdministrativeLink() {
+    when(permissions.findById(2L)).thenReturn(Optional.of(existing));
+    service.delete(2L);
+    verify(permissions).delete(existing);
   }
 
   @Test
@@ -173,6 +182,22 @@ class AdministratorServiceTest {
   @Test
   void rejectsListingUnknownBethel() {
     assertThrows(EntityNotFoundException.class, () -> service.findAdministratorsByBethelId(10L));
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = Role.class, names = "GRANDE_CONSELHO", mode = EnumSource.Mode.EXCLUDE)
+  void otherRolesCannotManageAdministrators(Role role) {
+    actor.setRole(role);
+    when(permissions.findById(2L)).thenReturn(Optional.of(existing));
+    assertThrows(AccessDeniedException.class, () -> service.create(request()));
+    assertThrows(AccessDeniedException.class,
+        () -> service.update(2L, new UpdatePermissionRequest(Role.MEMBRO_ATIVO, 10L)));
+    assertThrows(AccessDeniedException.class, () -> service.delete(2L));
+    assertThrows(AccessDeniedException.class, () -> service.activate(2L));
+    assertThrows(AccessDeniedException.class, () -> service.deactivate(2L));
+    assertThrows(AccessDeniedException.class, () -> service.findAdministratorsByBethelId(10L));
+    verify(permissions, never()).save(any());
+    verify(permissions, never()).delete(any(Permission.class));
   }
 
   @Test
