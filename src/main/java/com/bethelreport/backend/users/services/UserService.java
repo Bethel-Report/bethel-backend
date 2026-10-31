@@ -7,6 +7,7 @@ import com.bethelreport.backend.permissions.services.AuthorizationService;
 import com.bethelreport.backend.permissions.services.PermissionService;
 import com.bethelreport.backend.users.dtos.CreateUserRequest;
 import com.bethelreport.backend.users.dtos.UpdateUserRequest;
+import com.bethelreport.backend.users.dtos.UserFilters;
 import com.bethelreport.backend.users.dtos.UserResponse;
 import com.bethelreport.backend.users.entities.User;
 import com.bethelreport.backend.users.mappers.UserMapper;
@@ -41,19 +42,24 @@ public class UserService {
     return userMapper.toResponse(userRepository.save(user));
   }
 
-  public List<UserResponse> listUsers() {
+  public List<UserResponse> listUsers(UserFilters filter) {
     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    UserFilters filters = filter == null ? new UserFilters(null, null, null, null) : filter;
+    String email = filters.email() == null || filters.email().isBlank()
+        ? null
+        : filters.email().trim();
 
     if (authorizationService.isGrandeConselho(authentication)) {
-      return userRepository.findAll().stream().map(userMapper::toResponse).toList();
+      return userRepository
+          .searchUsers(email, filters.bethelId(), filters.status(), filters.profile()).stream()
+          .map(userMapper::toResponse).toList();
     }
 
     if (authorizationService.hasRole(authentication, Role.CONSELHO_DE_BETHEL)) {
-
       Long bethelId = authorizationService.getAuthorizedBethelId(authentication);
 
-      return userRepository.findAllByBethelId(bethelId).stream().map(userMapper::toResponse)
-          .toList();
+      return userRepository.searchUsers(email, bethelId, filters.status(), filters.profile())
+          .stream().map(userMapper::toResponse).toList();
     }
 
     throw new AccessDeniedException("Você não possui permissão para listar usuários.");
