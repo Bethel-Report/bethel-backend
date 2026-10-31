@@ -6,6 +6,8 @@
   <suppress checks="SummaryJavadoc" files=".*\.java" />
   <suppress checks="JavadocParagraph" files=".*\.java" />
 
+  <suppress checks=".*" files=".*MapperImpl\.java" />
+
   <suppress checks="HideUtilityClassConstructor" files=".*Application\.java" />
   <suppress checks="MissingJavadocMethod" files=".*Test\.java" />
   <suppress checks="MissingJavadocType" files=".*Test\.java" />
