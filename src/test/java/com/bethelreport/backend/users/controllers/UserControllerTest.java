@@ -3,6 +3,7 @@ package com.bethelreport.backend.users.controllers;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -20,6 +21,7 @@ import com.bethelreport.backend.permissions.entities.Role;
 import com.bethelreport.backend.permissions.repositories.PermissionRepository;
 import com.bethelreport.backend.users.dtos.CreateUserRequest;
 import com.bethelreport.backend.users.dtos.UpdateUserRequest;
+import com.bethelreport.backend.users.dtos.UserFilters;
 import com.bethelreport.backend.users.dtos.UserResponse;
 import com.bethelreport.backend.exceptions.DuplicateEmailException;
 import com.bethelreport.backend.exceptions.UserNotFoundException;
@@ -122,10 +124,24 @@ class UserControllerTest {
 
   @Test
   void listUsersReturnsOk() throws Exception {
-    when(userService.listUsers()).thenReturn(List.of(userResponse(1L, "a@example.com", true)));
+    when(userService.listUsers(any(UserFilters.class)))
+        .thenReturn(List.of(userResponse(1L, "a@example.com", true)));
 
     mockMvc.perform(get("/api/users").with(councilJwt())).andExpect(status().isOk())
         .andExpect(jsonPath("$[0].email").value("a@example.com"));
+  }
+
+  @Test
+  void listUsersBindsQueryFilters() throws Exception {
+    when(userService.listUsers(any(UserFilters.class))).thenReturn(List.of());
+
+    mockMvc
+        .perform(get("/api/users").with(councilJwt()).param("email", "member@example.com")
+            .param("bethelId", "99").param("status", "false").param("profile", "MEMBRO_ATIVO"))
+        .andExpect(status().isOk());
+
+    verify(userService)
+        .listUsers(new UserFilters("member@example.com", 99L, false, Role.MEMBRO_ATIVO));
   }
 
   @Test

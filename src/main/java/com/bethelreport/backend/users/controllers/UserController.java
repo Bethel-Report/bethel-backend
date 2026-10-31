@@ -3,6 +3,7 @@ package com.bethelreport.backend.users.controllers;
 import com.bethelreport.backend.security.annotations.CanManageUsers;
 import com.bethelreport.backend.users.dtos.CreateUserRequest;
 import com.bethelreport.backend.users.dtos.UpdateUserRequest;
+import com.bethelreport.backend.users.dtos.UserFilters;
 import com.bethelreport.backend.users.dtos.UserResponse;
 import com.bethelreport.backend.users.services.UserService;
 import jakarta.validation.Valid;
@@ -11,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -36,8 +38,8 @@ public class UserController {
 
   @CanManageUsers
   @GetMapping
-  public ResponseEntity<List<UserResponse>> listUsers() {
-    return ResponseEntity.ok(userService.listUsers());
+  public ResponseEntity<List<UserResponse>> listUsers(@ModelAttribute UserFilters filter) {
+    return ResponseEntity.ok(userService.listUsers(filter));
   }
 
   @CanManageUsers

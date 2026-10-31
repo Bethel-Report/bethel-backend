@@ -40,9 +40,10 @@ public class BethelController {
 
   @GrandeConselhoOnly
   @GetMapping
-  public List<BethelResponse> findAll(@RequestParam(required = false) String name) {
+  public List<BethelResponse> findAll(@RequestParam(required = false) String name,
+      @RequestParam(required = false) Boolean active) {
 
-    return bethelService.findAll(name);
+    return bethelService.findAll(name, active);
   }
 
   @PreAuthorize("@authorizationService.canAccessBethel(#p0, authentication)")
