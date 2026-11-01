@@ -12,6 +12,9 @@ import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.eq;
 
 import com.bethelreport.backend.exceptions.UserNotFoundException;
+import com.bethelreport.backend.invitations.entities.Invitation;
+import com.bethelreport.backend.invitations.entities.InvitationStatus;
+import com.bethelreport.backend.invitations.repositories.InvitationRepository;
 import com.bethelreport.backend.permissions.entities.Role;
 import com.bethelreport.backend.users.dtos.CreateUserRequest;
 import com.bethelreport.backend.users.dtos.UserFilters;
@@ -41,8 +44,9 @@ class UserServiceTest {
   private final UserMapper userMapper = new UserMapperImpl();
   private final PermissionService permissionService = mock(PermissionService.class);
   private final AuthorizationService authorizationService = mock(AuthorizationService.class);
+  private final InvitationRepository invitationRepository = mock(InvitationRepository.class);
   private final UserService userService = new UserService(userRepository, userMapper,
-      permissionService, authorizationService);
+      permissionService, authorizationService, invitationRepository);
   private final Authentication authentication = authentication("council@example.com");
 
   @BeforeEach
@@ -65,6 +69,8 @@ class UserServiceTest {
       saved.setId(1L);
       return saved;
     });
+    when(invitationRepository.findByEmailIgnoreCaseAndStatus("user@example.com",
+        InvitationStatus.PENDING)).thenReturn(Optional.empty());
 
     UserResponse response = userService.createUser(request);
 
@@ -76,6 +82,33 @@ class UserServiceTest {
     assertTrue(response.member());
     assertFalse(response.masonicRelationship());
     assertFalse(response.sponsorship());
+  }
+
+  @Test
+  void createsUserAndMarksInvitationAsAccepted() {
+    CreateUserRequest request = new CreateUserRequest("invited@example.com", "Invited User",
+        LocalDate.of(1995, 3, 15), "City", "Address", false, false, false, false);
+
+    Invitation pendingInvitation = new Invitation();
+    pendingInvitation.setId(10L);
+    pendingInvitation.setEmail("invited@example.com");
+    pendingInvitation.setStatus(InvitationStatus.PENDING);
+
+    when(userRepository.existsByEmailIgnoreCase("invited@example.com")).thenReturn(false);
+    when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+      User saved = invocation.getArgument(0);
+      saved.setId(2L);
+      return saved;
+    });
+    when(invitationRepository.findByEmailIgnoreCaseAndStatus("invited@example.com",
+        InvitationStatus.PENDING)).thenReturn(Optional.of(pendingInvitation));
+    when(invitationRepository.save(any(Invitation.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    userService.createUser(request);
+
+    assertEquals(InvitationStatus.ACCEPTED, pendingInvitation.getStatus());
+    verify(invitationRepository).save(pendingInvitation);
   }
 
   @Test

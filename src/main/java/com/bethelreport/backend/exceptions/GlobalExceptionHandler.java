@@ -53,6 +53,12 @@ public class GlobalExceptionHandler {
     return buildError(HttpStatus.NOT_FOUND, ex.getMessage());
   }
 
+  @ExceptionHandler(InvitationNotFoundException.class)
+  public ResponseEntity<Map<String, Object>> handleInvitationNotFound(
+      InvitationNotFoundException ex) {
+    return buildError(HttpStatus.NOT_FOUND, ex.getMessage());
+  }
+
   @ExceptionHandler(DuplicateEmailException.class)
   public ResponseEntity<Map<String, Object>> handleDuplicateEmail(DuplicateEmailException ex) {
     return buildError(HttpStatus.CONFLICT, ex.getMessage());
