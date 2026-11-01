@@ -1,6 +1,7 @@
 package com.bethelreport.backend.invitations.controllers;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
@@ -33,6 +34,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -78,24 +81,25 @@ class InvitationControllerTest {
 
   @Test
   void createInvitationReturnsCreated() throws Exception {
-    CreateInvitationRequest request = new CreateInvitationRequest("invited@example.com");
+    CreateInvitationRequest request = new CreateInvitationRequest("invited@example.com", 10L);
     InvitationResponse response = new InvitationResponse(1L, "invited@example.com",
-        InvitationStatus.PENDING, LocalDateTime.of(2026, 10, 31, 10, 0));
+        InvitationStatus.PENDING, LocalDateTime.of(2026, 10, 31, 10, 0), 10L);
 
-    when(invitationService.createInvitation(any(CreateInvitationRequest.class)))
-        .thenReturn(response);
+    when(invitationService.createInvitation(any(CreateInvitationRequest.class),
+        any(Authentication.class))).thenReturn(response);
 
     mockMvc
         .perform(post("/api/invitations").with(councilJwt()).contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(request)))
         .andExpect(status().isCreated()).andExpect(jsonPath("$.id").value(1))
         .andExpect(jsonPath("$.email").value("invited@example.com"))
-        .andExpect(jsonPath("$.status").value("PENDING"));
+        .andExpect(jsonPath("$.status").value("PENDING"))
+        .andExpect(jsonPath("$.bethelId").value(10));
   }
 
   @Test
   void createInvitationWithInvalidEmailReturnsBadRequest() throws Exception {
-    CreateInvitationRequest invalid = new CreateInvitationRequest("");
+    CreateInvitationRequest invalid = new CreateInvitationRequest("", 10L);
 
     mockMvc
         .perform(post("/api/invitations").with(councilJwt()).contentType(MediaType.APPLICATION_JSON)
@@ -105,10 +109,10 @@ class InvitationControllerTest {
 
   @Test
   void createInvitationWithDuplicateEmailReturnsConflict() throws Exception {
-    CreateInvitationRequest request = new CreateInvitationRequest("dup@example.com");
+    CreateInvitationRequest request = new CreateInvitationRequest("dup@example.com", 10L);
 
-    when(invitationService.createInvitation(any(CreateInvitationRequest.class)))
-        .thenThrow(new DuplicateEmailException("dup@example.com"));
+    when(invitationService.createInvitation(any(CreateInvitationRequest.class),
+        any(Authentication.class))).thenThrow(new DuplicateEmailException("dup@example.com"));
 
     mockMvc
         .perform(post("/api/invitations").with(councilJwt()).contentType(MediaType.APPLICATION_JSON)
@@ -117,23 +121,38 @@ class InvitationControllerTest {
   }
 
   @Test
+  void createInvitationForAnotherBethelReturnsForbidden() throws Exception {
+    CreateInvitationRequest request = new CreateInvitationRequest("new@example.com", 20L);
+
+    when(invitationService.createInvitation(any(CreateInvitationRequest.class),
+        any(Authentication.class)))
+        .thenThrow(new AccessDeniedException("Você não pode convidar para este Bethel."));
+
+    mockMvc.perform(post("/api/invitations").with(councilJwt())
+        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
   void listInvitationsReturnsOk() throws Exception {
     InvitationResponse response = new InvitationResponse(1L, "a@example.com",
-        InvitationStatus.PENDING, LocalDateTime.of(2026, 10, 31, 10, 0));
+        InvitationStatus.PENDING, LocalDateTime.of(2026, 10, 31, 10, 0), 10L);
 
     when(invitationService.listInvitations()).thenReturn(List.of(response));
 
     mockMvc.perform(get("/api/invitations").with(councilJwt())).andExpect(status().isOk())
         .andExpect(jsonPath("$[0].email").value("a@example.com"))
-        .andExpect(jsonPath("$[0].status").value("PENDING"));
+        .andExpect(jsonPath("$[0].status").value("PENDING"))
+        .andExpect(jsonPath("$[0].bethelId").value(10));
   }
 
   @Test
   void getInvitationByIdReturnsOk() throws Exception {
     InvitationResponse response = new InvitationResponse(1L, "a@example.com",
-        InvitationStatus.PENDING, LocalDateTime.of(2026, 10, 31, 10, 0));
+        InvitationStatus.PENDING, LocalDateTime.of(2026, 10, 31, 10, 0), 10L);
 
-    when(invitationService.getInvitationById(1L)).thenReturn(response);
+    when(invitationService.getInvitationById(eq(1L), any(Authentication.class)))
+        .thenReturn(response);
 
     mockMvc.perform(get("/api/invitations/1").with(councilJwt())).andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value(1)).andExpect(jsonPath("$.email").value("a@example.com"));
@@ -141,10 +160,19 @@ class InvitationControllerTest {
 
   @Test
   void getInvitationByIdNotFoundReturnsNotFound() throws Exception {
-    when(invitationService.getInvitationById(99L)).thenThrow(new InvitationNotFoundException(99L));
+    when(invitationService.getInvitationById(eq(99L), any(Authentication.class)))
+        .thenThrow(new InvitationNotFoundException(99L));
 
     mockMvc.perform(get("/api/invitations/99").with(councilJwt())).andExpect(status().isNotFound())
         .andExpect(jsonPath("$.message").exists());
+  }
+
+  @Test
+  void getInvitationFromAnotherBethelReturnsForbidden() throws Exception {
+    when(invitationService.getInvitationById(eq(5L), any(Authentication.class)))
+        .thenThrow(new AccessDeniedException("Você não pode gerenciar este convite."));
+
+    mockMvc.perform(get("/api/invitations/5").with(councilJwt())).andExpect(status().isForbidden());
   }
 
   @Test
@@ -152,12 +180,13 @@ class InvitationControllerTest {
     mockMvc.perform(delete("/api/invitations/1").with(councilJwt()))
         .andExpect(status().isNoContent());
 
-    verify(invitationService).revokeInvitation(1L);
+    verify(invitationService).revokeInvitation(eq(1L), any(Authentication.class));
   }
 
   @Test
   void revokeInvitationNotFoundReturnsNotFound() throws Exception {
-    doThrow(new InvitationNotFoundException(99L)).when(invitationService).revokeInvitation(99L);
+    doThrow(new InvitationNotFoundException(99L)).when(invitationService).revokeInvitation(eq(99L),
+        any(Authentication.class));
 
     mockMvc.perform(delete("/api/invitations/99").with(councilJwt()))
         .andExpect(status().isNotFound()).andExpect(jsonPath("$.message").exists());
@@ -187,8 +216,9 @@ class InvitationControllerTest {
     mockMvc
         .perform(post("/api/invitations")
             .with(jwt().jwt(token -> token.claim("email", "member@example.com")))
-            .contentType(MediaType.APPLICATION_JSON).content(
-                objectMapper.writeValueAsString(new CreateInvitationRequest("new@example.com"))))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper
+                .writeValueAsString(new CreateInvitationRequest("new@example.com", 10L))))
         .andExpect(status().isForbidden());
   }
 }

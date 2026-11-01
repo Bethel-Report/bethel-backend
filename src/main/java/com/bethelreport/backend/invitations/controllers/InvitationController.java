@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -29,9 +30,9 @@ public class InvitationController {
   @CanManageUsers
   @PostMapping
   public ResponseEntity<InvitationResponse> createInvitation(
-      @Valid @RequestBody CreateInvitationRequest request) {
+      @Valid @RequestBody CreateInvitationRequest request, Authentication authentication) {
     return ResponseEntity.status(HttpStatus.CREATED)
-        .body(invitationService.createInvitation(request));
+        .body(invitationService.createInvitation(request, authentication));
   }
 
   @CanManageUsers
@@ -42,14 +43,15 @@ public class InvitationController {
 
   @CanManageUsers
   @GetMapping("/{id}")
-  public ResponseEntity<InvitationResponse> getInvitationById(@PathVariable Long id) {
-    return ResponseEntity.ok(invitationService.getInvitationById(id));
+  public ResponseEntity<InvitationResponse> getInvitationById(@PathVariable Long id,
+      Authentication authentication) {
+    return ResponseEntity.ok(invitationService.getInvitationById(id, authentication));
   }
 
   @CanManageUsers
   @DeleteMapping("/{id}")
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  public void revokeInvitation(@PathVariable Long id) {
-    invitationService.revokeInvitation(id);
+  public void revokeInvitation(@PathVariable Long id, Authentication authentication) {
+    invitationService.revokeInvitation(id, authentication);
   }
 }
