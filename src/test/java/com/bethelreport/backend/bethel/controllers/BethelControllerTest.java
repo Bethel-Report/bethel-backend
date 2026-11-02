@@ -1,6 +1,6 @@
 package com.bethelreport.backend.bethel.controllers;
 
-import com.bethelreport.backend.config.SecurityConfig;
+import com.bethelreport.backend.security.config.SecurityConfig;
 import com.bethelreport.backend.permissions.services.PermissionService;
 import com.bethelreport.backend.permissions.dtos.PermissionResponse;
 import com.bethelreport.backend.permissions.services.AuthorizationService;
