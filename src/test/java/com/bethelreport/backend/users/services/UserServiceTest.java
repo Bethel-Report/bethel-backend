@@ -11,22 +11,26 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.eq;
 
+import com.bethelreport.backend.bethel.entities.Bethel;
+import com.bethelreport.backend.exceptions.DuplicateEmailException;
 import com.bethelreport.backend.exceptions.UserNotFoundException;
 import com.bethelreport.backend.invitations.entities.Invitation;
 import com.bethelreport.backend.invitations.entities.InvitationStatus;
 import com.bethelreport.backend.invitations.repositories.InvitationRepository;
+import com.bethelreport.backend.permissions.entities.Permission;
 import com.bethelreport.backend.permissions.entities.Role;
+import com.bethelreport.backend.permissions.repositories.PermissionRepository;
+import com.bethelreport.backend.permissions.services.AuthorizationService;
+import com.bethelreport.backend.permissions.services.PermissionService;
 import com.bethelreport.backend.users.dtos.CreateUserRequest;
-import com.bethelreport.backend.users.dtos.UserFilters;
 import com.bethelreport.backend.users.dtos.UpdateUserRequest;
+import com.bethelreport.backend.users.dtos.UserFilters;
+import com.bethelreport.backend.users.dtos.UserProfileResponse;
 import com.bethelreport.backend.users.dtos.UserResponse;
 import com.bethelreport.backend.users.entities.User;
-import com.bethelreport.backend.exceptions.DuplicateEmailException;
 import com.bethelreport.backend.users.mappers.UserMapper;
 import com.bethelreport.backend.users.mappers.UserMapperImpl;
 import com.bethelreport.backend.users.repositories.UserRepository;
-import com.bethelreport.backend.permissions.services.AuthorizationService;
-import com.bethelreport.backend.permissions.services.PermissionService;
 import org.mockito.Mockito;
 import java.time.LocalDate;
 import java.util.List;
@@ -45,8 +49,9 @@ class UserServiceTest {
   private final PermissionService permissionService = mock(PermissionService.class);
   private final AuthorizationService authorizationService = mock(AuthorizationService.class);
   private final InvitationRepository invitationRepository = mock(InvitationRepository.class);
+  private final PermissionRepository permissionRepository = mock(PermissionRepository.class);
   private final UserService userService = new UserService(userRepository, userMapper,
-      permissionService, authorizationService, invitationRepository);
+      permissionService, authorizationService, invitationRepository, permissionRepository);
   private final Authentication authentication = authentication("council@example.com");
 
   @BeforeEach
@@ -275,6 +280,52 @@ class UserServiceTest {
 
     assertThrows(UserNotFoundException.class,
         () -> userService.deactivateUser(99L, authentication));
+  }
+
+  @Test
+  void getsAuthenticatedUserWithPermission() {
+    User user = buildUser(1L, "council@example.com", true);
+    Bethel bethel = new Bethel();
+    bethel.setId(10L);
+    bethel.setName("Bethel Test");
+    Permission permission = new Permission();
+    permission.setRole(Role.CONSELHO_DE_BETHEL);
+    permission.setBethel(bethel);
+    permission.setActive(true);
+
+    when(userRepository.findByEmailIgnoreCase("council@example.com")).thenReturn(Optional.of(user));
+    when(permissionRepository.findByUserEmail("council@example.com"))
+        .thenReturn(Optional.of(permission));
+
+    UserProfileResponse response = userService.getAuthenticatedUser(authentication);
+
+    assertEquals(1L, response.id());
+    assertEquals("council@example.com", response.email());
+    assertEquals(Role.CONSELHO_DE_BETHEL, response.permission().role());
+    assertEquals(10L, response.permission().bethelId());
+    assertEquals("Bethel Test", response.permission().bethelName());
+  }
+
+  @Test
+  void getsAuthenticatedUserWithoutPermission() {
+    User user = buildUser(1L, "council@example.com", true);
+
+    when(userRepository.findByEmailIgnoreCase("council@example.com")).thenReturn(Optional.of(user));
+    when(permissionRepository.findByUserEmail("council@example.com")).thenReturn(Optional.empty());
+
+    UserProfileResponse response = userService.getAuthenticatedUser(authentication);
+
+    assertEquals(1L, response.id());
+    assertEquals("council@example.com", response.email());
+    assertEquals(null, response.permission());
+  }
+
+  @Test
+  void getAuthenticatedUserThrowsWhenUserNotFound() {
+    when(userRepository.findByEmailIgnoreCase("council@example.com")).thenReturn(Optional.empty());
+
+    assertThrows(UserNotFoundException.class,
+        () -> userService.getAuthenticatedUser(authentication));
   }
 
   private User buildUser(Long id, String email, boolean active) {
