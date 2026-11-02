@@ -14,7 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.bethelreport.backend.bethel.entities.Bethel;
-import com.bethelreport.backend.config.SecurityConfig;
+import com.bethelreport.backend.security.config.SecurityConfig;
 import com.bethelreport.backend.exceptions.DuplicateEmailException;
 import com.bethelreport.backend.exceptions.InvitationNotFoundException;
 import com.bethelreport.backend.invitations.dtos.CreateInvitationRequest;

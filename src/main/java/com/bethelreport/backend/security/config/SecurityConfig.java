@@ -1,4 +1,4 @@
-package com.bethelreport.backend.config;
+package com.bethelreport.backend.security.config;
 
 import com.bethelreport.backend.users.services.AdmissionService;
 import jakarta.servlet.http.HttpServletRequest;
