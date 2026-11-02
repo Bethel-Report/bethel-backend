@@ -22,6 +22,8 @@ import com.bethelreport.backend.permissions.repositories.PermissionRepository;
 import com.bethelreport.backend.users.dtos.CreateUserRequest;
 import com.bethelreport.backend.users.dtos.UpdateUserRequest;
 import com.bethelreport.backend.users.dtos.UserFilters;
+import com.bethelreport.backend.users.dtos.UserProfileResponse;
+import com.bethelreport.backend.users.dtos.UserProfileResponse.PermissionInfo;
 import com.bethelreport.backend.users.dtos.UserResponse;
 import com.bethelreport.backend.exceptions.DuplicateEmailException;
 import com.bethelreport.backend.exceptions.UserNotFoundException;
@@ -79,6 +81,38 @@ class UserControllerTest {
 
   private org.springframework.test.web.servlet.request.RequestPostProcessor councilJwt() {
     return jwt().jwt(token -> token.claim("email", "council@example.com"));
+  }
+
+  @Test
+  void getAuthenticatedUserReturnsOk() throws Exception {
+    UserProfileResponse profile = new UserProfileResponse(1L, "council@example.com", "Council User",
+        LocalDate.of(1990, 1, 1), true, "City", "Address", false, false, false, false,
+        new PermissionInfo(Role.CONSELHO_DE_BETHEL, 10L, "Bethel Test"));
+
+    when(userService.getAuthenticatedUser(any(Authentication.class))).thenReturn(profile);
+
+    mockMvc.perform(get("/api/users/me").with(councilJwt())).andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value(1))
+        .andExpect(jsonPath("$.email").value("council@example.com"))
+        .andExpect(jsonPath("$.permission.role").value("CONSELHO_DE_BETHEL"))
+        .andExpect(jsonPath("$.permission.bethelId").value(10))
+        .andExpect(jsonPath("$.permission.bethelName").value("Bethel Test"));
+  }
+
+  @Test
+  void getAuthenticatedUserWithoutPermissionReturnsOk() throws Exception {
+    UserProfileResponse profile = new UserProfileResponse(1L, "council@example.com", "Council User",
+        LocalDate.of(1990, 1, 1), true, "City", "Address", false, false, false, false, null);
+
+    when(userService.getAuthenticatedUser(any(Authentication.class))).thenReturn(profile);
+
+    mockMvc.perform(get("/api/users/me").with(councilJwt())).andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value(1)).andExpect(jsonPath("$.permission").doesNotExist());
+  }
+
+  @Test
+  void getAuthenticatedUserRequiresAuthentication() throws Exception {
+    mockMvc.perform(get("/api/users/me")).andExpect(status().isUnauthorized());
   }
 
   @Test

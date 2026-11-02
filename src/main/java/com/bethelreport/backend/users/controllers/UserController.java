@@ -4,6 +4,7 @@ import com.bethelreport.backend.security.annotations.CanManageUsers;
 import com.bethelreport.backend.users.dtos.CreateUserRequest;
 import com.bethelreport.backend.users.dtos.UpdateUserRequest;
 import com.bethelreport.backend.users.dtos.UserFilters;
+import com.bethelreport.backend.users.dtos.UserProfileResponse;
 import com.bethelreport.backend.users.dtos.UserResponse;
 import com.bethelreport.backend.users.services.UserService;
 import jakarta.validation.Valid;
@@ -34,6 +35,11 @@ public class UserController {
   @PostMapping
   public ResponseEntity<UserResponse> createUser(@Valid @RequestBody CreateUserRequest request) {
     return ResponseEntity.status(HttpStatus.CREATED).body(userService.createUser(request));
+  }
+
+  @GetMapping("/me")
+  public ResponseEntity<UserProfileResponse> getAuthenticatedUser(Authentication authentication) {
+    return ResponseEntity.ok(userService.getAuthenticatedUser(authentication));
   }
 
   @CanManageUsers
