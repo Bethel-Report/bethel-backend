@@ -10,10 +10,13 @@ import com.bethelreport.backend.invitations.entities.Invitation;
 import com.bethelreport.backend.invitations.entities.InvitationStatus;
 import com.bethelreport.backend.invitations.mappers.InvitationMapper;
 import com.bethelreport.backend.invitations.repositories.InvitationRepository;
+import com.bethelreport.backend.message.dtos.EmailMessage;
+import com.bethelreport.backend.message.publishers.EmailPublisher;
 import com.bethelreport.backend.permissions.entities.Role;
 import com.bethelreport.backend.permissions.services.AuthorizationService;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
@@ -27,14 +30,16 @@ public class InvitationService {
   private final InvitationMapper invitationMapper;
   private final AuthorizationService authorizationService;
   private final BethelRepository bethelRepository;
+  private final EmailPublisher emailPublisher;
 
   public InvitationService(InvitationRepository invitationRepository,
       InvitationMapper invitationMapper, AuthorizationService authorizationService,
-      BethelRepository bethelRepository) {
+      BethelRepository bethelRepository, EmailPublisher emailPublisher) {
     this.invitationRepository = invitationRepository;
     this.invitationMapper = invitationMapper;
     this.authorizationService = authorizationService;
     this.bethelRepository = bethelRepository;
+    this.emailPublisher = emailPublisher;
   }
 
   public InvitationResponse createInvitation(CreateInvitationRequest request,
@@ -56,7 +61,14 @@ public class InvitationService {
     invitation.setStatus(InvitationStatus.PENDING);
     invitation.setCreatedAt(LocalDateTime.now());
     invitation.setBethel(bethel);
-    return invitationMapper.toResponse(invitationRepository.save(invitation));
+
+    Invitation saved = invitationRepository.save(invitation);
+
+    emailPublisher
+        .publish(new EmailMessage(saved.getEmail(), "Convite para acessar o Bethel Report",
+            "invitation", Map.of("invitationLink", "link para aceitar o convite")));
+
+    return invitationMapper.toResponse(saved);
   }
 
   public List<InvitationResponse> listInvitations() {
