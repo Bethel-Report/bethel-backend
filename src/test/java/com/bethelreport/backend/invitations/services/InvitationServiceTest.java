@@ -20,6 +20,7 @@ import com.bethelreport.backend.invitations.entities.InvitationStatus;
 import com.bethelreport.backend.invitations.mappers.InvitationMapper;
 import com.bethelreport.backend.invitations.mappers.InvitationMapperImpl;
 import com.bethelreport.backend.invitations.repositories.InvitationRepository;
+import com.bethelreport.backend.message.publishers.EmailPublisher;
 import com.bethelreport.backend.permissions.entities.Role;
 import com.bethelreport.backend.permissions.services.AuthorizationService;
 import java.time.LocalDateTime;
@@ -39,8 +40,9 @@ class InvitationServiceTest {
   private final InvitationMapper invitationMapper = new InvitationMapperImpl();
   private final AuthorizationService authorizationService = mock(AuthorizationService.class);
   private final BethelRepository bethelRepository = mock(BethelRepository.class);
+  private final EmailPublisher emailPublisher = mock(EmailPublisher.class);
   private final InvitationService invitationService = new InvitationService(invitationRepository,
-      invitationMapper, authorizationService, bethelRepository);
+      invitationMapper, authorizationService, bethelRepository, emailPublisher);
   private final Authentication authentication = authentication("council@example.com");
 
   @BeforeEach
