@@ -14,7 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.bethelreport.backend.bethel.entities.Bethel;
-import com.bethelreport.backend.config.SecurityConfig;
+import com.bethelreport.backend.security.config.SecurityConfig;
 import com.bethelreport.backend.exceptions.DuplicateEmailException;
 import com.bethelreport.backend.exceptions.InvitationNotFoundException;
 import com.bethelreport.backend.invitations.dtos.CreateInvitationRequest;
@@ -39,6 +39,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 import tools.jackson.databind.ObjectMapper;
 
 @WebMvcTest(InvitationController.class)
@@ -131,6 +133,19 @@ class InvitationControllerTest {
     mockMvc.perform(post("/api/invitations").with(councilJwt())
         .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(request)))
         .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void createInvitationForMissingBethelReturnsNotFound() throws Exception {
+    CreateInvitationRequest request = new CreateInvitationRequest("new@example.com", 99L);
+
+    when(invitationService.createInvitation(any(CreateInvitationRequest.class),
+        any(Authentication.class)))
+        .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Bethel não encontrado."));
+
+    mockMvc.perform(post("/api/invitations").with(councilJwt())
+        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isNotFound());
   }
 
   @Test
