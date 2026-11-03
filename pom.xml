@@ -34,6 +34,17 @@
         <maven-pmd-plugin.version>3.28.0</maven-pmd-plugin.version>
     </properties>
     <dependencies>
+        <!-- MinIO uses OkHttp 5; Maven needs the JVM variant explicitly. -->
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp-jvm</artifactId>
+            <version>5.5.1</version>
+        </dependency>
+        <dependency>
+            <groupId>io.minio</groupId>
+            <artifactId>minio</artifactId>
+            <version>9.0.4</version>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-amqp</artifactId>
