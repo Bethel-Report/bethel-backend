@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -20,11 +21,13 @@ import com.bethelreport.backend.invitations.entities.InvitationStatus;
 import com.bethelreport.backend.invitations.mappers.InvitationMapper;
 import com.bethelreport.backend.invitations.mappers.InvitationMapperImpl;
 import com.bethelreport.backend.invitations.repositories.InvitationRepository;
+import com.bethelreport.backend.message.dtos.EmailMessage;
 import com.bethelreport.backend.message.publishers.EmailPublisher;
 import com.bethelreport.backend.permissions.entities.Role;
 import com.bethelreport.backend.permissions.services.AuthorizationService;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -73,6 +76,13 @@ class InvitationServiceTest {
     assertEquals("new@example.com", response.email());
     assertEquals(InvitationStatus.PENDING, response.status());
     assertEquals(10L, response.bethelId());
+
+    EmailMessage expectedMessage = new EmailMessage("new@example.com",
+        "Convite para acessar o Bethel Report", "invitation",
+        Map.of("invitationLink", "link para aceitar o convite"));
+    var inOrder = inOrder(invitationRepository, emailPublisher);
+    inOrder.verify(invitationRepository).save(any(Invitation.class));
+    inOrder.verify(emailPublisher).publish(expectedMessage);
   }
 
   @Test
@@ -85,6 +95,7 @@ class InvitationServiceTest {
     assertThrows(DuplicateEmailException.class,
         () -> invitationService.createInvitation(request, authentication));
     verify(invitationRepository, never()).save(any());
+    verify(emailPublisher, never()).publish(any(EmailMessage.class));
   }
 
   @Test
@@ -96,6 +107,7 @@ class InvitationServiceTest {
     assertThrows(ResponseStatusException.class,
         () -> invitationService.createInvitation(request, authentication));
     verify(invitationRepository, never()).save(any());
+    verify(emailPublisher, never()).publish(any(EmailMessage.class));
   }
 
   @Test
@@ -108,6 +120,7 @@ class InvitationServiceTest {
     assertThrows(AccessDeniedException.class,
         () -> invitationService.createInvitation(request, authentication));
     verify(invitationRepository, never()).save(any());
+    verify(emailPublisher, never()).publish(any(EmailMessage.class));
   }
 
   @Test
