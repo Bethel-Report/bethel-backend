@@ -13,7 +13,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.bethelreport.backend.config.SecurityConfig;
+import com.bethelreport.backend.security.config.SecurityConfig;
 import com.bethelreport.backend.permissions.services.AuthorizationService;
 import com.bethelreport.backend.bethel.entities.Bethel;
 import com.bethelreport.backend.permissions.entities.Permission;
