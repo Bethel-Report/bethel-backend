@@ -13,9 +13,15 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+  @ExceptionHandler(MaxUploadSizeExceededException.class)
+  public ResponseEntity<Map<String, Object>> handleUploadSize(MaxUploadSizeExceededException ex) {
+    return buildError(HttpStatus.PAYLOAD_TOO_LARGE, "Arquivo excede o limite permitido.");
+  }
 
   @ExceptionHandler(AuthenticationException.class)
   public ResponseEntity<Map<String, Object>> handleAuthentication(AuthenticationException ex) {
