@@ -35,5 +35,17 @@ jobs:
       - name: Validate last commit message
         run: yarn commitlint --last --verbose
 
-      - name: Build and verify
-        run: ./mvnw verify --batch-mode --no-transfer-progress
+      - name: Build MinIO integration image
+        run: >-
+          docker build
+          --file docker/minio/Dockerfile
+          --tag bethel-minio:RELEASE.2025-10-15T17-29-55Z
+          .
+
+      - name: Run build and tests
+        run: >-
+          ./mvnw
+          -Dminio.test.image=bethel-minio:RELEASE.2025-10-15T17-29-55Z
+          verify
+          --batch-mode
+          --no-transfer-progress
