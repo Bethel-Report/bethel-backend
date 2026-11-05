@@ -4,12 +4,16 @@ import com.bethelreport.backend.exceptions.DuplicateEmailException;
 import com.bethelreport.backend.exceptions.UserNotFoundException;
 import com.bethelreport.backend.invitations.entities.InvitationStatus;
 import com.bethelreport.backend.invitations.repositories.InvitationRepository;
+import com.bethelreport.backend.permissions.entities.Permission;
 import com.bethelreport.backend.permissions.entities.Role;
+import com.bethelreport.backend.permissions.repositories.PermissionRepository;
 import com.bethelreport.backend.permissions.services.AuthorizationService;
 import com.bethelreport.backend.permissions.services.PermissionService;
 import com.bethelreport.backend.users.dtos.CreateUserRequest;
 import com.bethelreport.backend.users.dtos.UpdateUserRequest;
 import com.bethelreport.backend.users.dtos.UserFilters;
+import com.bethelreport.backend.users.dtos.UserProfileResponse;
+import com.bethelreport.backend.users.dtos.UserProfileResponse.PermissionInfo;
 import com.bethelreport.backend.users.dtos.UserResponse;
 import com.bethelreport.backend.users.entities.User;
 import com.bethelreport.backend.users.mappers.UserMapper;
@@ -18,6 +22,7 @@ import java.util.List;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,15 +33,17 @@ public class UserService {
   private final PermissionService permissionService;
   private final AuthorizationService authorizationService;
   private final InvitationRepository invitationRepository;
+  private final PermissionRepository permissionRepository;
 
   public UserService(UserRepository userRepository, UserMapper userMapper,
       PermissionService permissionService, AuthorizationService authorizationService,
-      InvitationRepository invitationRepository) {
+      InvitationRepository invitationRepository, PermissionRepository permissionRepository) {
     this.userRepository = userRepository;
     this.userMapper = userMapper;
     this.permissionService = permissionService;
     this.authorizationService = authorizationService;
     this.invitationRepository = invitationRepository;
+    this.permissionRepository = permissionRepository;
   }
 
   @Transactional
@@ -115,6 +122,27 @@ public class UserService {
     User savedUser = userRepository.save(user);
     permissionService.deactivateByUserId(id);
     return userMapper.toResponse(savedUser);
+  }
+
+  public UserProfileResponse getAuthenticatedUser(Authentication authentication) {
+    if (!(authentication instanceof JwtAuthenticationToken jwtAuth)) {
+      throw new AccessDeniedException("Autenticação inválida.");
+    }
+
+    String email = jwtAuth.getToken().getClaimAsString("email");
+    User user = userRepository.findByEmailIgnoreCase(email)
+        .orElseThrow(() -> new UserNotFoundException(email));
+
+    PermissionInfo permissionInfo = permissionRepository.findByUserEmail(email)
+        .filter(Permission::isActive)
+        .map(p -> new PermissionInfo(p.getRole(),
+            p.getBethel() != null ? p.getBethel().getId() : null,
+            p.getBethel() != null ? p.getBethel().getName() : null))
+        .orElse(null);
+
+    return new UserProfileResponse(user.getId(), user.getEmail(), user.getName(),
+        user.getBirthday(), user.isActive(), user.getCity(), user.getAddress(), user.isVolunteer(),
+        user.isMasonicRelationship(), user.isMember(), user.isSponsorship(), permissionInfo);
   }
 
   private User getAuthorizedUser(Long userId, Authentication authentication) {
