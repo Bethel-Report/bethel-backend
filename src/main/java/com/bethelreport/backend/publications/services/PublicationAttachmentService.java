@@ -4,6 +4,7 @@ import com.bethelreport.backend.permissions.entities.Permission;
 import com.bethelreport.backend.publications.dtos.AttachmentResponse;
 import com.bethelreport.backend.publications.entities.Publication;
 import com.bethelreport.backend.publications.entities.PublicationAttachment;
+import com.bethelreport.backend.publications.mappers.PublicationMapper;
 import com.bethelreport.backend.publications.repositories.PublicationAttachmentRepository;
 import com.bethelreport.backend.publications.repositories.PublicationRepository;
 import com.bethelreport.backend.storage.MinioStorage;
@@ -32,16 +33,18 @@ public class PublicationAttachmentService {
   private final MinioStorage storage;
   private final StorageCleanup cleanup;
   private final UploadPolicy policy;
+  private final PublicationMapper mapper;
 
   public PublicationAttachmentService(PublicationRepository publications,
       PublicationAttachmentRepository attachments, PublicationAccess access, MinioStorage storage,
-      StorageCleanup cleanup, UploadPolicy policy) {
+      StorageCleanup cleanup, UploadPolicy policy, PublicationMapper mapper) {
     this.publications = publications;
     this.attachments = attachments;
     this.access = access;
     this.storage = storage;
     this.cleanup = cleanup;
     this.policy = policy;
+    this.mapper = mapper;
   }
 
   @Transactional
@@ -65,14 +68,15 @@ public class PublicationAttachmentService {
     attachment.setContentType(validated.contentType());
     attachment.setSize(validated.bytes().length);
     attachment.setCreatedAt(LocalDateTime.now());
-    AttachmentResponse result = response(attachments.saveAndFlush(attachment));
+    AttachmentResponse result = mapper.toResponse(attachments.saveAndFlush(attachment));
     cleanup.cancelUploadCleanup(key);
     return result;
   }
 
   public List<AttachmentResponse> list(Long id, boolean management, Authentication authentication) {
     authorizeRead(id, management, authentication);
-    return attachments.findAllByPublicationIdOrderByIdAsc(id).stream().map(this::response).toList();
+    return attachments.findAllByPublicationIdOrderByIdAsc(id).stream().map(mapper::toResponse)
+        .toList();
   }
 
   public ResponseEntity<byte[]> download(Long id, Long attachmentId, boolean management,
@@ -118,10 +122,5 @@ public class PublicationAttachmentService {
   private PublicationAttachment find(Long id, Long attachmentId) {
     return attachments.findByIdAndPublicationId(attachmentId, id)
         .orElseThrow(() -> new EntityNotFoundException("Anexo não encontrado."));
-  }
-
-  private AttachmentResponse response(PublicationAttachment attachment) {
-    return new AttachmentResponse(attachment.getId(), attachment.getFilename(),
-        attachment.getContentType(), attachment.getSize(), attachment.getCreatedAt());
   }
 }

@@ -28,8 +28,9 @@ public class PublicationAccess {
     if (email == null || email.isBlank()) {
       throw new AccessDeniedException("Usuário não identificado.");
     }
-    return permissionRepository.findByUserEmail(email).filter(
-        p -> p.isActive() && p.getUser() != null && p.getUser().isActive() && p.getRole() != null)
+    return permissionRepository.findByUserEmail(email)
+        .filter(p -> p.isActive() && p.getUser() != null && p.getUser().isActive()
+            && p.getRole() != null && (p.getBethel() == null || p.getBethel().isActive()))
         .orElseThrow(() -> new AccessDeniedException("Permissão ativa não encontrada."));
   }
 
