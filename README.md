@@ -212,7 +212,9 @@ A API oferece atividades (`ACTIVITY`), orientações (`GUIDANCE`) e comunicados
 (`ANNOUNCEMENT`). Somente Grande Conselho e Conselho de Bethel podem criar, editar
 ou excluir publicações e anexos. O Conselho de Bethel fica restrito ao próprio
 Bethel ativo. A autoria vem do usuário autenticado; editar não altera autor nem
-instante de criação. Todas as operações exigem usuário e permissão ativos.
+instante de criação. Todas as operações exigem usuário e permissão ativos. Quando a permissão está
+associada a um Bethel, esse Bethel também deve estar ativo, inclusive para leitura
+e acesso aos anexos.
 
 ### Cadastro e edição
 
@@ -238,7 +240,8 @@ Orientações e comunicados não recebem `activityDate`.
 O Grande Conselho pode criar publicações estaduais com `bethelId: null` e escolher
 `audience: ALL_BETHELS` (sem listas de destinatários), `BETHELS` com
 `targetBethelIds`, ou `USERS` com `targetUserIds`. As listas são exclusivas e
-limitadas a 500 IDs. Os Bethéis devem existir e estar ativos; usuários selecionados
+limitadas a 500 IDs. Os IDs dos destinatários são usados apenas na distribuição e
+não são expostos nas respostas de cadastro, edição, consulta ou feed. Os Bethéis devem existir e estar ativos; usuários selecionados
 precisam de usuário e permissão ativos. Publicações locais usam `bethelId` e atingem
 somente esse Bethel ou usuários pertencentes a ele. A leitura de publicações locais
 confere o vínculo atual: quem muda de Bethel perde esse acesso, mesmo que seu ID

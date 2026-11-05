@@ -6,6 +6,7 @@ import com.bethelreport.backend.publications.dtos.PublicationRequest;
 import com.bethelreport.backend.publications.dtos.PublicationResponse;
 import com.bethelreport.backend.publications.entities.Publication;
 import com.bethelreport.backend.publications.entities.PublicationType;
+import com.bethelreport.backend.publications.mappers.PublicationMapper;
 import com.bethelreport.backend.publications.repositories.PublicationRepository;
 import jakarta.persistence.EntityNotFoundException;
 import java.time.LocalDateTime;
@@ -22,12 +23,14 @@ public class PublicationService {
   private final PublicationRepository publicationRepository;
   private final PublicationRules rules;
   private final PublicationAccess access;
+  private final PublicationMapper mapper;
 
   public PublicationService(PublicationRepository publicationRepository, PublicationRules rules,
-      PublicationAccess access) {
+      PublicationAccess access, PublicationMapper mapper) {
     this.publicationRepository = publicationRepository;
     this.rules = rules;
     this.access = access;
+    this.mapper = mapper;
   }
 
   @Transactional
@@ -38,7 +41,7 @@ public class PublicationService {
     publication.setAuthor(actor.getUser());
     publication.setCreatedAt(LocalDateTime.now());
     rules.apply(publication, request, actor);
-    return response(publicationRepository.save(publication));
+    return mapper.toResponse(publicationRepository.save(publication));
   }
 
   public Page<PublicationResponse> list(int page, int size, Sort.Direction order, Long bethelFilter,
@@ -53,7 +56,7 @@ public class PublicationService {
     }
     return publicationRepository.findFeed(management, actor.getRole() == Role.GRANDE_CONSELHO,
         bethelId, actor.getUser().getId(), LocalDateTime.now(), bethelFilter, type,
-        PageRequest.of(page, size, Sort.by(order, "timelineAt", "id"))).map(this::response);
+        PageRequest.of(page, size, Sort.by(order, "timelineAt", "id"))).map(mapper::toResponse);
   }
 
   public PublicationResponse get(Long id, boolean management, Authentication authentication) {
@@ -64,7 +67,7 @@ public class PublicationService {
     } else {
       access.requireRead(actor, publication);
     }
-    return response(publication);
+    return mapper.toResponse(publication);
   }
 
   @Transactional
@@ -76,20 +79,11 @@ public class PublicationService {
     access.requireManagement(actor, access.bethelId(publication));
     access.requireManagement(actor, request.bethelId());
     rules.apply(publication, request, actor);
-    return response(publicationRepository.save(publication));
+    return mapper.toResponse(publicationRepository.save(publication));
   }
 
   public Publication find(Long id) {
     return publicationRepository.findById(id)
         .orElseThrow(() -> new EntityNotFoundException("Publicação não encontrada."));
-  }
-
-  private PublicationResponse response(Publication publication) {
-    return new PublicationResponse(publication.getId(), publication.getTitle(),
-        publication.getContent(), publication.getType(), publication.getActivityDate(),
-        publication.getAuthor().getId(), access.bethelId(publication), publication.getAudience(),
-        java.util.Set.copyOf(publication.getTargetBethelIds()),
-        java.util.Set.copyOf(publication.getTargetUserIds()), publication.getDisplayFrom(),
-        publication.getDisplayUntil(), publication.getCreatedAt(), publication.getUpdatedAt());
   }
 }

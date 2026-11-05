@@ -26,6 +26,7 @@ import com.bethelreport.backend.publications.entities.Publication;
 import com.bethelreport.backend.publications.entities.PublicationAttachment;
 import com.bethelreport.backend.publications.entities.PublicationAudience;
 import com.bethelreport.backend.publications.entities.PublicationType;
+import com.bethelreport.backend.publications.mappers.PublicationMapperImpl;
 import com.bethelreport.backend.publications.repositories.PublicationAttachmentRepository;
 import com.bethelreport.backend.publications.repositories.PublicationRepository;
 import com.bethelreport.backend.publications.services.PublicationAccess;
@@ -68,7 +69,7 @@ import tools.jackson.databind.ObjectMapper;
 @WebMvcTest({PublicationController.class, PublicationAttachmentController.class})
 @Import({SecurityConfig.class, PublicationService.class, PublicationAccess.class,
     PublicationRules.class, PublicationDateRules.class, PublicationDeletionService.class,
-    PublicationAttachmentService.class, UploadPolicy.class})
+    PublicationAttachmentService.class, UploadPolicy.class, PublicationMapperImpl.class})
 @TestPropertySource(properties = {"storage.upload.allowed-extensions=pdf,png,mp4",
     "storage.upload.max-size=5MB"})
 class PublicationControllerTest {
@@ -203,7 +204,9 @@ class PublicationControllerTest {
       }
       mvc.perform(post("/api/publications").with(token()).contentType(MediaType.APPLICATION_JSON)
           .content(mapper.writeValueAsString(body))).andExpect(status().isCreated())
-          .andExpect(jsonPath("$.audience").value(audience));
+          .andExpect(jsonPath("$.audience").value(audience))
+          .andExpect(jsonPath("$.targetBethelIds").doesNotExist())
+          .andExpect(jsonPath("$.targetUserIds").doesNotExist());
     }
   }
 
@@ -391,9 +394,59 @@ class PublicationControllerTest {
     mvc.perform(get("/api/publications/1").with(token())).andExpect(status().isForbidden());
     actor.getUser().setActive(true);
     actor.setRole(Role.GRANDE_CONSELHO);
+    actor.setBethel(null);
     bethel.setActive(false);
     mvc.perform(post("/api/publications").with(token()).contentType(MediaType.APPLICATION_JSON)
         .content(mapper.writeValueAsString(activity()))).andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void responsesNeverExposeDistributionTargets() throws Exception {
+    when(
+        publications.findFeed(anyBoolean(), anyBoolean(), any(), any(), any(), any(), any(), any()))
+        .thenReturn(new PageImpl<>(List.of(publication)));
+    for (boolean management : List.of(false, true)) {
+      mvc.perform(get("/api/publications/1?management=" + management).with(token()))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.authorId").value(7))
+          .andExpect(jsonPath("$.bethelId").value(10))
+          .andExpect(jsonPath("$.targetBethelIds").doesNotExist())
+          .andExpect(jsonPath("$.targetUserIds").doesNotExist());
+      mvc.perform(get("/api/publications?management=" + management).with(token()))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.content[0].targetBethelIds").doesNotExist())
+          .andExpect(jsonPath("$.content[0].targetUserIds").doesNotExist());
+    }
+    mvc.perform(put("/api/publications/1").with(token()).contentType(MediaType.APPLICATION_JSON)
+        .content(mapper.writeValueAsString(activity()))).andExpect(status().isOk())
+        .andExpect(jsonPath("$.targetBethelIds").doesNotExist())
+        .andExpect(jsonPath("$.targetUserIds").doesNotExist());
+  }
+
+  @Test
+  void inactiveAssociatedBethelBlocksAllPublicationAndAttachmentOperations() throws Exception {
+    bethel.setActive(false);
+    for (Role role : List.of(Role.MEMBRO_ATIVO, Role.MEMBRO_DE_MAIORIDADE, Role.CONSELHO_DE_BETHEL,
+        Role.GRANDE_CONSELHO)) {
+      actor.setRole(role);
+      for (String route : List.of("/api/publications", "/api/publications?management=true",
+          "/api/publications/1", "/api/publications/1?management=true",
+          "/api/publications/1/attachments", "/api/publications/1/attachments/2")) {
+        mvc.perform(get(route).with(token())).andExpect(status().isForbidden());
+      }
+      mvc.perform(post("/api/publications").with(token()).contentType(MediaType.APPLICATION_JSON)
+          .content(mapper.writeValueAsString(activity()))).andExpect(status().isForbidden());
+      mvc.perform(put("/api/publications/1").with(token()).contentType(MediaType.APPLICATION_JSON)
+          .content(mapper.writeValueAsString(activity()))).andExpect(status().isForbidden());
+      mvc.perform(delete("/api/publications/1").with(token())).andExpect(status().isForbidden());
+      mvc.perform(multipart("/api/publications/1/attachments").file(pdf()).with(token()))
+          .andExpect(status().isForbidden());
+      mvc.perform(delete("/api/publications/1/attachments/2").with(token()))
+          .andExpect(status().isForbidden());
+    }
+    verify(storage, never()).download(any());
+    verify(storage, never()).upload(any(), any(), org.mockito.ArgumentMatchers.anyLong(), any());
+    verify(publications, never()).findFeed(anyBoolean(), anyBoolean(), any(), any(), any(), any(),
+        any(), any());
   }
 
   @Test
