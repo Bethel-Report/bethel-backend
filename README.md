@@ -308,9 +308,12 @@ Preencha as variáveis do `.env-example` no `.env` local, sem versionar segredos
 - `PUBLICATION_MAX_REQUEST_SIZE`: limite da requisição, maior que o limite por
   arquivo para incluir os cabeçalhos multipart.
 
-Os uploads ficam desabilitados até configurar explicitamente os formatos e
-limites de negócio. A política é compartilhada pelo Grande Conselho e pelos
-Conselhos de Bethel. Não é necessário configurar uploads para usar o CRUD textual.
+O limite padrão é de **10 MB por arquivo** e **11 MB por requisição multipart**.
+Os formatos suportados acima ficam habilitados por padrão. Para alterar a política,
+ajuste `PUBLICATION_ALLOWED_EXTENSIONS`, `PUBLICATION_MAX_FILE_SIZE` e
+`PUBLICATION_MAX_REQUEST_SIZE` no ambiente e reinicie o backend, sem recompilar.
+A política é compartilhada pelo Grande Conselho e pelos Conselhos de Bethel.
+Para desabilitar uploads, configure a lista de extensões vazia ou o limite `0B`.
 
 ```bash
 docker compose up -d --build minio
