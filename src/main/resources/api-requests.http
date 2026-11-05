@@ -1,0 +1,40 @@
+### ===========================
+### Variáveis
+### ===========================
+
+@baseUrl = http://localhost:8080/api
+@token = Bearer SEU_TOKEN_JWT_AQUI
+
+### ===========================
+### Perfil do usuário autenticado
+### ===========================
+
+### Obter perfil do usuário autenticado
+GET {{baseUrl}}/users/me
+Authorization: {{token}}
+
+### ===========================
+### Convites
+### ===========================
+
+### Criar convite
+POST {{baseUrl}}/invitations
+Authorization: {{token}}
+Content-Type: application/json
+
+{
+  "email": "convidado@example.com",
+  "bethelId": 1
+}
+
+### Listar convites
+GET {{baseUrl}}/invitations
+Authorization: {{token}}
+
+### Buscar convite por ID
+GET {{baseUrl}}/invitations/1
+Authorization: {{token}}
+
+### Revogar convite
+DELETE {{baseUrl}}/invitations/1
+Authorization: {{token}}
