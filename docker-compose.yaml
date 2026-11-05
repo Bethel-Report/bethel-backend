@@ -1,5 +1,4 @@
 services:
-
   backend:
     build:
       context: .
@@ -27,8 +26,6 @@ services:
     networks:
       - net1
 
-
-
   postgres:
     image: postgres:16
 
@@ -49,16 +46,17 @@ services:
       - postgres_data:/var/lib/postgresql/data
 
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DATASOURCE_USERNAME} -d ${DATASOURCE_DB}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${DATASOURCE_USERNAME} -d ${DATASOURCE_DB}",
+        ]
       interval: 5s
       timeout: 5s
       retries: 10
 
     networks:
       - net1
-
-
-
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.3.3
@@ -101,8 +99,8 @@ services:
     image: rabbitmq:4.1-management-alpine
     container_name: backend-rabbitmq
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:?Defina RABBITMQ_USERNAME no .env}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Defina RABBITMQ_PASSWORD no .env}
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
     ports:
       - "5672:5672"
       - "15672:15672"

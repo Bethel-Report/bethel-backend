@@ -17,6 +17,7 @@ import java.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.server.ResponseStatusException;
 import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.images.builder.ImageFromDockerfile;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -27,7 +28,7 @@ class MinioStorageIntegrationTest {
   private static final GenericContainer<?> MINIO = new GenericContainer<>(image())
       .withEnv("MINIO_ROOT_USER", "integration-test")
       .withEnv("MINIO_ROOT_PASSWORD", "integration-test-secret").withCommand("server", "/data")
-      .withExposedPorts(9000);
+      .withExposedPorts(9000).waitingFor(Wait.forHttp("/minio/health/live").forPort(9000));
 
   private static Future<String> image() {
     String existingImage = System.getProperty("minio.test.image");
