@@ -35,5 +35,29 @@ jobs:
       - name: Validate last commit message
         run: yarn commitlint --last --verbose
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Cache MinIO Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: minio-${{ hashFiles('docker/minio/Dockerfile') }}
+          restore-keys: minio-
+
+      - name: Build MinIO image
+        uses: docker/build-push-action@v6
+        with:
+          context: docker/minio
+          load: true
+          tags: bethel-minio:test
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+
+      - name: Rotate cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+
       - name: Build and verify
-        run: ./mvnw verify --batch-mode --no-transfer-progress
+        run: ./mvnw verify --batch-mode --no-transfer-progress -Dminio.test.image=bethel-minio:test
