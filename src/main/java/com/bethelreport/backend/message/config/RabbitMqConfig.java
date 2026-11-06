@@ -7,16 +7,16 @@ import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.DirectExchange;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.QueueBuilder;
-import org.springframework.boot.amqp.autoconfigure.RabbitTemplateCustomizer;
 import org.springframework.amqp.support.converter.JacksonJsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
+import org.springframework.boot.amqp.autoconfigure.RabbitTemplateCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class RabbitMqConfig {
 
-  private static final Logger log = LoggerFactory.getLogger(RabbitMqConfig.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RabbitMqConfig.class);
 
   public static final String EMAIL_EXCHANGE = "email.exchange";
   public static final String EMAIL_QUEUE = "email.queue";
@@ -67,11 +67,11 @@ public class RabbitMqConfig {
       template.setObservationEnabled(true);
       template.setConfirmCallback((correlationData, ack, cause) -> {
         if (!ack) {
-          log.error("Mensagem nao confirmada pelo broker: correlationData={}, causa={}",
+          LOG.error("Mensagem nao confirmada pelo broker: correlationData={}, causa={}",
               correlationData, cause);
         }
       });
-      template.setReturnsCallback(returned -> log.warn(
+      template.setReturnsCallback(returned -> LOG.warn(
           "Mensagem retornada: exchange={}, routingKey={}, replyCode={}, replyText={}",
           returned.getExchange(), returned.getRoutingKey(), returned.getReplyCode(),
           returned.getReplyText()));

@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
+@SuppressWarnings({"PMD.CloseResource", "PMD.AvoidCatchingGenericException"})
 public class MinioStorage {
   private final MinioClient client;
   private final String bucket;
@@ -35,7 +36,6 @@ public class MinioStorage {
     }
   }
 
-  @SuppressWarnings("PMD.AvoidCatchingGenericException")
   public void upload(String key, InputStream stream, long size, String contentType) {
     MinioClient mc = requireClient();
     try {
@@ -49,7 +49,6 @@ public class MinioStorage {
     }
   }
 
-  @SuppressWarnings("PMD.AvoidCatchingGenericException")
   public byte[] download(String key) {
     MinioClient mc = requireClient();
     try (
@@ -60,7 +59,6 @@ public class MinioStorage {
     }
   }
 
-  @SuppressWarnings("PMD.AvoidCatchingGenericException")
   public void delete(String key) {
     MinioClient mc = requireClient();
     try {
@@ -84,9 +82,13 @@ public class MinioStorage {
   }
 
   @PreDestroy
-  void close() throws Exception {
+  void close() {
     if (client != null) {
-      client.close();
+      try {
+        client.close();
+      } catch (Exception ignored) {
+        // best-effort cleanup
+      }
     }
   }
 
