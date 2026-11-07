@@ -308,9 +308,12 @@ Preencha as variáveis do `.env-example` no `.env` local, sem versionar segredos
 - `PUBLICATION_MAX_REQUEST_SIZE`: limite da requisição, maior que o limite por
   arquivo para incluir os cabeçalhos multipart.
 
-Os uploads ficam desabilitados até configurar explicitamente os formatos e
-limites de negócio. A política é compartilhada pelo Grande Conselho e pelos
-Conselhos de Bethel. Não é necessário configurar uploads para usar o CRUD textual.
+O limite padrão é de **10 MB por arquivo** e **11 MB por requisição multipart**.
+Os formatos suportados acima ficam habilitados por padrão. Para alterar a política,
+ajuste `PUBLICATION_ALLOWED_EXTENSIONS`, `PUBLICATION_MAX_FILE_SIZE` e
+`PUBLICATION_MAX_REQUEST_SIZE` no ambiente e reinicie o backend, sem recompilar.
+A política é compartilhada pelo Grande Conselho e pelos Conselhos de Bethel.
+Para desabilitar uploads, configure a lista de extensões vazia ou o limite `0B`.
 
 ```bash
 docker compose up -d --build minio
@@ -321,7 +324,8 @@ API MinIO: porta 9000; console: porta 9001, ambas vinculadas ao localhost. O vol
 oficial `RELEASE.2025-10-15T17-29-55Z`, pelo Dockerfile em `docker/minio`. O primeiro
 build baixa o Go e as dependências do MinIO; builds seguintes reutilizam o cache.
 A camada de download de módulos Go é separada da compilação para preservar esses
-downloads quando uma tentativa de compilação é interrompida.
+downloads quando uma tentativa de compilação é interrompida. O cache de
+compilação do Go também é preservado pelo BuildKit nas novas tentativas.
 A edição comunitária foi arquivada pelo fornecedor; a versão usada deve ser
 revista antes de definir a implantação de produção:
 [repositório oficial do MinIO](https://github.com/minio/minio).
@@ -336,7 +340,9 @@ registram a limpeza na mesma transação que remove os metadados.
 
 `./mvnw verify` executa testes e verificações de qualidade. Os testes de integração
 exigem Docker e incluem a migration PostgreSQL, os filtros reais do feed e o ciclo
-upload/download/exclusão no MinIO. Os testes MVC usam os serviços reais e substituem
+upload/download/exclusão no MinIO. A integração de anexos verifica também os
+metadados no PostgreSQL e a limpeza de objetos após rollback da transação.
+Os testes MVC usam os serviços reais e substituem
 somente persistência e armazenamento, cobrindo CRUD, públicos-alvo, datas,
 autorização e validações dos anexos.
 
