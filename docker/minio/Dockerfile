@@ -5,7 +5,7 @@ WORKDIR /src
 RUN git clone --depth 1 --branch "${MINIO_VERSION}" https://github.com/minio/minio.git .
 ENV CGO_ENABLED=0 GOTOOLCHAIN=local GOMAXPROCS=2
 RUN go mod download
-RUN go build -p 1 -trimpath -o /out/minio .
+RUN --mount=type=cache,target=/root/.cache/go-build go build -p 2 -trimpath -o /out/minio .
 
 FROM alpine:3.22
 RUN apk add --no-cache ca-certificates curl \

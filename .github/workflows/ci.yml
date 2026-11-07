@@ -35,5 +35,10 @@ jobs:
       - name: Validate last commit message
         run: yarn commitlint --last --verbose
 
+      - name: Build MinIO test image
+        env:
+          DOCKER_BUILDKIT: '1'
+        run: docker build --tag bethel-minio:ci docker/minio
+
       - name: Build and verify
-        run: ./mvnw verify --batch-mode --no-transfer-progress
+        run: ./mvnw verify --batch-mode --no-transfer-progress -Dminio.test.image=bethel-minio:ci
