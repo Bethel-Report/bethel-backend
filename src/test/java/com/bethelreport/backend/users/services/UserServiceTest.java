@@ -98,6 +98,7 @@ class UserServiceTest {
     pendingInvitation.setId(10L);
     pendingInvitation.setEmail("invited@example.com");
     pendingInvitation.setStatus(InvitationStatus.PENDING);
+    pendingInvitation.setKeycloakUserId("kc-invited-1");
 
     when(userRepository.existsByEmailIgnoreCase("invited@example.com")).thenReturn(false);
     when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
@@ -114,6 +115,8 @@ class UserServiceTest {
 
     assertEquals(InvitationStatus.ACCEPTED, pendingInvitation.getStatus());
     verify(invitationRepository).save(pendingInvitation);
+    verify(userRepository).save(org.mockito.ArgumentMatchers
+        .argThat(user -> "kc-invited-1".equals(user.getKeycloakUserId())));
   }
 
   @Test

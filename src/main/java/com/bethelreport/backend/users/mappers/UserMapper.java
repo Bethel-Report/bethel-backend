@@ -13,10 +13,12 @@ public interface UserMapper {
 
   @Mapping(target = "id", ignore = true)
   @Mapping(target = "active", constant = "true")
+  @Mapping(target = "keycloakUserId", ignore = true)
   User toEntity(CreateUserRequest request);
 
   @Mapping(target = "id", ignore = true)
   @Mapping(target = "active", ignore = true)
+  @Mapping(target = "keycloakUserId", ignore = true)
   void updateEntity(UpdateUserRequest request, @MappingTarget User user);
 
   UserResponse toResponse(User user);

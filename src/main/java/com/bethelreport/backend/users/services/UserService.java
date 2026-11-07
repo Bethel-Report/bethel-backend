@@ -52,15 +52,14 @@ public class UserService {
       throw new DuplicateEmailException(request.email());
     }
     User user = userMapper.toEntity(request);
-    UserResponse response = userMapper.toResponse(userRepository.save(user));
-
     invitationRepository.findByEmailIgnoreCaseAndStatus(request.email(), InvitationStatus.PENDING)
         .ifPresent(invitation -> {
+          user.setKeycloakUserId(invitation.getKeycloakUserId());
           invitation.setStatus(InvitationStatus.ACCEPTED);
           invitationRepository.save(invitation);
         });
 
-    return response;
+    return userMapper.toResponse(userRepository.save(user));
   }
 
   public List<UserResponse> listUsers(UserFilters filter) {
