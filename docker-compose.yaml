@@ -11,6 +11,10 @@ services:
 
     environment:
       MINIO_ENDPOINT: http://minio:9000
+      KEYCLOAK_ADMIN_SERVER_URL: http://keycloak:8080
+      KEYCLOAK_ADMIN_REALM: bethel-report
+      KEYCLOAK_ADMIN_CLIENT_ID: bethel-backend-admin
+      KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET}
 
     ports:
       - "8080:8080"

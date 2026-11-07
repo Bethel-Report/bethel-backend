@@ -6,8 +6,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
 
 import com.bethelreport.backend.bethel.entities.Bethel;
@@ -23,6 +24,7 @@ import com.bethelreport.backend.invitations.mappers.InvitationMapperImpl;
 import com.bethelreport.backend.invitations.repositories.InvitationRepository;
 import com.bethelreport.backend.message.dtos.EmailMessage;
 import com.bethelreport.backend.message.publishers.EmailPublisher;
+import com.bethelreport.backend.keycloak.services.KeycloakUserService;
 import com.bethelreport.backend.permissions.entities.Role;
 import com.bethelreport.backend.permissions.services.AuthorizationService;
 import java.time.LocalDateTime;
@@ -37,6 +39,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 class InvitationServiceTest {
   private final InvitationRepository invitationRepository = mock(InvitationRepository.class);
@@ -44,9 +48,12 @@ class InvitationServiceTest {
   private final AuthorizationService authorizationService = mock(AuthorizationService.class);
   private final BethelRepository bethelRepository = mock(BethelRepository.class);
   private final EmailPublisher emailPublisher = mock(EmailPublisher.class);
+  private final KeycloakUserService keycloakUserService = mock(KeycloakUserService.class);
   private final InvitationService invitationService = new InvitationService(invitationRepository,
-      invitationMapper, authorizationService, bethelRepository, emailPublisher);
+      invitationMapper, authorizationService, bethelRepository, emailPublisher,
+      keycloakUserService);
   private final Authentication authentication = authentication("council@example.com");
+  private int invitationRepositorySaveCount;
 
   @BeforeEach
   void setUp() {
@@ -70,6 +77,8 @@ class InvitationServiceTest {
       return saved;
     });
 
+    when(keycloakUserService.provisionUser("new@example.com", null, null)).thenReturn("kc-123");
+
     InvitationResponse response = invitationService.createInvitation(request, authentication);
 
     assertEquals(1L, response.id());
@@ -80,9 +89,58 @@ class InvitationServiceTest {
     EmailMessage expectedMessage = new EmailMessage("new@example.com",
         "Convite para acessar o Bethel Report", "invitation",
         Map.of("invitationLink", "link para aceitar o convite"));
-    var inOrder = inOrder(invitationRepository, emailPublisher);
-    inOrder.verify(invitationRepository).save(any(Invitation.class));
-    inOrder.verify(emailPublisher).publish(expectedMessage);
+    verify(invitationRepository, times(2)).save(any(Invitation.class));
+    verify(keycloakUserService).provisionUser("new@example.com", null, null);
+    verify(emailPublisher).publish(expectedMessage);
+  }
+
+  @Test
+  void deletesProvisionedIdentityWhenEmailPublicationFails() {
+    CreateInvitationRequest request = new CreateInvitationRequest("new@example.com", 10L);
+    when(bethelRepository.existsById(10L)).thenReturn(true);
+    when(bethelRepository.getReferenceById(10L)).thenReturn(buildBethel(10L));
+    when(invitationRepository.existsByEmailIgnoreCase("new@example.com")).thenReturn(false);
+    when(invitationRepository.save(any(Invitation.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+    when(keycloakUserService.provisionUser("new@example.com", null, null)).thenReturn("kc-456");
+    doThrow(new IllegalStateException("broker unavailable")).when(emailPublisher)
+        .publish(any(EmailMessage.class));
+
+    TransactionSynchronizationManager.initSynchronization();
+    try {
+      assertThrows(IllegalStateException.class,
+          () -> invitationService.createInvitation(request, authentication));
+      completeRollback();
+    } finally {
+      TransactionSynchronizationManager.clearSynchronization();
+    }
+    verify(keycloakUserService).deleteUser("kc-456");
+  }
+
+  @Test
+  void deletesProvisionedIdentityWhenInvitationPersistenceFails() {
+    CreateInvitationRequest request = new CreateInvitationRequest("new@example.com", 10L);
+    when(bethelRepository.existsById(10L)).thenReturn(true);
+    when(bethelRepository.getReferenceById(10L)).thenReturn(buildBethel(10L));
+    when(invitationRepository.existsByEmailIgnoreCase("new@example.com")).thenReturn(false);
+    when(invitationRepository.save(any(Invitation.class))).thenAnswer(invocation -> {
+      if (invitationRepositorySaveCount++ == 0) {
+        return invocation.getArgument(0);
+      }
+      throw new IllegalStateException("database unavailable");
+    });
+    when(keycloakUserService.provisionUser("new@example.com", null, null)).thenReturn("kc-789");
+
+    TransactionSynchronizationManager.initSynchronization();
+    try {
+      assertThrows(IllegalStateException.class,
+          () -> invitationService.createInvitation(request, authentication));
+      completeRollback();
+    } finally {
+      TransactionSynchronizationManager.clearSynchronization();
+    }
+    verify(keycloakUserService).deleteUser("kc-789");
+    verify(emailPublisher, never()).publish(any(EmailMessage.class));
   }
 
   @Test
@@ -213,6 +271,12 @@ class InvitationServiceTest {
     assertThrows(AccessDeniedException.class,
         () -> invitationService.revokeInvitation(1L, authentication));
     verify(invitationRepository, never()).delete(any());
+  }
+
+  private void completeRollback() {
+    TransactionSynchronizationManager.getSynchronizations()
+        .forEach(synchronization -> synchronization
+            .afterCompletion(TransactionSynchronization.STATUS_ROLLED_BACK));
   }
 
   private Invitation buildInvitation(Long id, String email, InvitationStatus status,

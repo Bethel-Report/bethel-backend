@@ -32,6 +32,9 @@ public class Invitation {
   @Column(nullable = false, length = 20)
   private InvitationStatus status;
 
+  @Column(name = "keycloak_user_id", unique = true)
+  private String keycloakUserId;
+
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "bethel_id", nullable = false)
   private Bethel bethel;
