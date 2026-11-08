@@ -50,7 +50,7 @@ jobs:
         with:
           context: docker/minio
           load: true
-          tags: bethel-minio:test
+          tags: bethel-minio:ci
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
 
@@ -60,4 +60,4 @@ jobs:
           mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
       - name: Build and verify
-        run: ./mvnw verify --batch-mode --no-transfer-progress -Dminio.test.image=bethel-minio:test
+        run: ./mvnw verify --batch-mode --no-transfer-progress -Dminio.test.image=bethel-minio:ci
