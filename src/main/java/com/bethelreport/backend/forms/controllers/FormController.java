@@ -46,15 +46,13 @@ public class FormController {
   }
 
   @PutMapping("/{id}")
-  public FormResponse update(@PathVariable Long id,
-      @Valid @RequestBody UpdateFormRequest request) {
+  public FormResponse update(@PathVariable Long id, @Valid @RequestBody UpdateFormRequest request) {
     return formService.update(id, request);
   }
 
   @PostMapping("/{id}/clone")
   @ResponseStatus(HttpStatus.CREATED)
-  public FormResponse clone(@PathVariable Long id,
-      @Valid @RequestBody CloneFormRequest request) {
+  public FormResponse clone(@PathVariable Long id, @Valid @RequestBody CloneFormRequest request) {
     return formService.clone(id, request);
   }
 

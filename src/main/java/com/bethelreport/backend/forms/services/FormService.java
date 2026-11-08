@@ -136,8 +136,7 @@ public class FormService {
 
   private void requireDraft(Form form) {
     if (form.getStatus() != FormStatus.DRAFT) {
-      throw new IllegalStateException(
-          "Formulário publicado ou encerrado não pode ser alterado.");
+      throw new IllegalStateException("Formulário publicado ou encerrado não pode ser alterado.");
     }
   }
 
@@ -152,8 +151,7 @@ public class FormService {
     for (FormFieldRequest field : fields) {
       if (field.type() == FormFieldType.SELECT
           && (field.options() == null || field.options().isEmpty())) {
-        throw new IllegalArgumentException(
-            "Campo do tipo SELECT deve possuir ao menos uma opção.");
+        throw new IllegalArgumentException("Campo do tipo SELECT deve possuir ao menos uma opção.");
       }
     }
   }
