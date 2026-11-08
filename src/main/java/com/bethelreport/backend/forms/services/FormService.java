@@ -113,18 +113,7 @@ public class FormService {
     clone.setCreatedAt(LocalDateTime.now());
     clone.setUpdatedAt(LocalDateTime.now());
 
-    for (FormField sourceField : source.getFields()) {
-      FormField field = new FormField();
-      field.setForm(clone);
-      field.setLabel(sourceField.getLabel());
-      field.setType(sourceField.getType());
-      field.setRequired(sourceField.isRequired());
-      field.setDisplayOrder(sourceField.getDisplayOrder());
-      if (sourceField.getOptions() != null && !sourceField.getOptions().isEmpty()) {
-        field.setOptions(new ArrayList<>(sourceField.getOptions()));
-      }
-      clone.getFields().add(field);
-    }
+    source.getFields().stream().map(sf -> cloneField(sf, clone)).forEach(clone.getFields()::add);
 
     return formMapper.toResponse(formRepository.save(clone));
   }
@@ -157,17 +146,32 @@ public class FormService {
   }
 
   private void addFields(Form form, List<FormFieldRequest> fieldRequests) {
-    for (FormFieldRequest request : fieldRequests) {
-      FormField field = new FormField();
-      field.setForm(form);
-      field.setLabel(request.label());
-      field.setType(request.type());
-      field.setRequired(request.required());
-      field.setDisplayOrder(request.displayOrder());
-      if (request.options() != null) {
-        field.setOptions(new ArrayList<>(request.options()));
-      }
-      form.getFields().add(field);
+    fieldRequests.stream().map(r -> toField(r, form)).forEach(form.getFields()::add);
+  }
+
+  private FormField toField(FormFieldRequest request, Form form) {
+    FormField field = new FormField();
+    field.setForm(form);
+    field.setLabel(request.label());
+    field.setType(request.type());
+    field.setRequired(request.required());
+    field.setDisplayOrder(request.displayOrder());
+    if (request.options() != null) {
+      field.setOptions(new ArrayList<>(request.options()));
     }
+    return field;
+  }
+
+  private FormField cloneField(FormField source, Form target) {
+    FormField field = new FormField();
+    field.setForm(target);
+    field.setLabel(source.getLabel());
+    field.setType(source.getType());
+    field.setRequired(source.isRequired());
+    field.setDisplayOrder(source.getDisplayOrder());
+    if (source.getOptions() != null && !source.getOptions().isEmpty()) {
+      field.setOptions(new ArrayList<>(source.getOptions()));
+    }
+    return field;
   }
 }
