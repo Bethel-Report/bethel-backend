@@ -38,3 +38,108 @@ Authorization: {{token}}
 ### Revogar convite
 DELETE {{baseUrl}}/invitations/1
 Authorization: {{token}}
+
+### ===========================
+### Formulários (Grande Conselho)
+### ===========================
+
+### Criar formulário
+POST {{baseUrl}}/forms
+Authorization: {{token}}
+Content-Type: application/json
+
+{
+  "name": "Relatório Anual 2026",
+  "description": "Formulário de relatório anual dos Bethels",
+  "referenceYear": 2026,
+  "openingDate": "2026-01-15",
+  "closingDate": "2026-03-31",
+  "fields": [
+    {
+      "label": "Reuniões realizadas no período",
+      "type": "NUMBER",
+      "required": true,
+      "displayOrder": 1
+    },
+    {
+      "label": "Data da última eleição",
+      "type": "DATE",
+      "required": true,
+      "displayOrder": 2
+    },
+    {
+      "label": "Possui sede própria",
+      "type": "BOOLEAN",
+      "required": true,
+      "displayOrder": 3
+    },
+    {
+      "label": "Situação financeira",
+      "type": "SELECT",
+      "required": true,
+      "displayOrder": 4,
+      "options": ["Superávit", "Equilibrada", "Deficitária"]
+    },
+    {
+      "label": "Observações gerais",
+      "type": "TEXT",
+      "required": false,
+      "displayOrder": 5
+    }
+  ]
+}
+
+### Listar formulários
+GET {{baseUrl}}/forms
+Authorization: {{token}}
+
+### Buscar formulário por ID
+GET {{baseUrl}}/forms/1
+Authorization: {{token}}
+
+### Atualizar formulário (somente rascunho)
+PUT {{baseUrl}}/forms/1
+Authorization: {{token}}
+Content-Type: application/json
+
+{
+  "name": "Relatório Anual 2026 (revisado)",
+  "description": "Formulário revisado",
+  "referenceYear": 2026,
+  "openingDate": "2026-02-01",
+  "closingDate": "2026-04-30",
+  "fields": [
+    {
+      "label": "Reuniões realizadas no período",
+      "type": "NUMBER",
+      "required": true,
+      "displayOrder": 1
+    },
+    {
+      "label": "Observações gerais",
+      "type": "TEXT",
+      "required": false,
+      "displayOrder": 2
+    }
+  ]
+}
+
+### Publicar formulário
+PATCH {{baseUrl}}/forms/1/publish
+Authorization: {{token}}
+
+### Encerrar formulário
+PATCH {{baseUrl}}/forms/1/close
+Authorization: {{token}}
+
+### Clonar formulário
+POST {{baseUrl}}/forms/1/clone
+Authorization: {{token}}
+Content-Type: application/json
+
+{
+  "name": "Relatório Anual 2027",
+  "referenceYear": 2027,
+  "openingDate": "2027-01-15",
+  "closingDate": "2027-03-31"
+}
