@@ -3,9 +3,8 @@ package com.bethelreport.backend.message.publishers;
 import com.bethelreport.backend.message.config.RabbitMqConfig;
 import com.bethelreport.backend.message.dtos.EmailMessage;
 import java.util.UUID;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.amqp.AmqpException;
 import org.springframework.amqp.rabbit.connection.CorrelationData;
@@ -28,18 +27,15 @@ public class EmailPublisher {
   }
 
   private void waitForConfirm(CorrelationData correlation) {
+    CorrelationData.Confirm confirm;
     try {
-      CorrelationData.Confirm confirm = correlation.getFuture().get(CONFIRM_TIMEOUT_SECONDS,
-          TimeUnit.SECONDS);
-      if (!confirm.ack()) {
-        throw new AmqpException(
-            "Broker NACK: id=" + correlation.getId() + ", reason=" + confirm.reason());
-      }
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      throw new AmqpException("Interrupted awaiting confirm: id=" + correlation.getId(), e);
-    } catch (ExecutionException | TimeoutException e) {
-      throw new AmqpException("Confirm not received: id=" + correlation.getId(), e);
+      confirm = correlation.getFuture().orTimeout(CONFIRM_TIMEOUT_SECONDS, TimeUnit.SECONDS).join();
+    } catch (CompletionException e) {
+      throw new AmqpException("Confirm failed: id=" + correlation.getId(), e);
+    }
+    if (!confirm.ack()) {
+      throw new AmqpException(
+          "Broker NACK: id=" + correlation.getId() + ", reason=" + confirm.reason());
     }
   }
 }
