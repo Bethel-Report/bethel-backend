@@ -110,8 +110,8 @@ class FormControllerTest {
   @Test
   void publishesFormWithGrandeConselho() throws Exception {
     FormResponse published = new FormResponse(1L, "Relatório Anual 2026", null, 2026,
-        FormStatus.PUBLISHED, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 31), null,
-        List.of(), LocalDateTime.now(), LocalDateTime.now());
+        FormStatus.PUBLISHED, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 31), null, List.of(),
+        LocalDateTime.now(), LocalDateTime.now());
     when(formService.publish(1L)).thenReturn(published);
     mvc.perform(patch(BASE + "/1/publish").with(admittedJwt())).andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("PUBLISHED"));
@@ -152,8 +152,9 @@ class FormControllerTest {
     String invalid = """
         {"name":"","referenceYear":null,"fields":[]}
         """;
-    mvc.perform(post(BASE).with(admittedJwt()).contentType(MediaType.APPLICATION_JSON)
-        .content(invalid)).andExpect(status().isBadRequest());
+    mvc.perform(
+        post(BASE).with(admittedJwt()).contentType(MediaType.APPLICATION_JSON).content(invalid))
+        .andExpect(status().isBadRequest());
     verifyNoInteractions(formService);
   }
 
@@ -178,8 +179,8 @@ class FormControllerTest {
   }
 
   private FormResponse formResponse() {
-    FormFieldResponse field =
-        new FormFieldResponse(1L, "Reuniões realizadas", FormFieldType.NUMBER, true, 1, List.of());
+    FormFieldResponse field = new FormFieldResponse(1L, "Reuniões realizadas", FormFieldType.NUMBER,
+        true, 1, List.of());
     return new FormResponse(1L, "Relatório Anual 2026", null, 2026, FormStatus.DRAFT,
         LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 31), null, List.of(field),
         LocalDateTime.now(), LocalDateTime.now());

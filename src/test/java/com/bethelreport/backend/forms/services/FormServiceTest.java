@@ -56,8 +56,8 @@ class FormServiceTest {
   @Test
   void createsFormWithSelectFieldOptions() {
     saveReturnsArgument();
-    FormFieldRequest selectField =
-        new FormFieldRequest("Categoria", FormFieldType.SELECT, true, 1, List.of("A", "B", "C"));
+    FormFieldRequest selectField = new FormFieldRequest("Categoria", FormFieldType.SELECT, true, 1,
+        List.of("A", "B", "C"));
     CreateFormRequest request = new CreateFormRequest("Formulário", null, 2026,
         LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 31), List.of(selectField));
     FormResponse result = service.create(request);
@@ -74,10 +74,10 @@ class FormServiceTest {
 
   @Test
   void rejectsSelectFieldWithoutOptions() {
-    FormFieldRequest selectField =
-        new FormFieldRequest("Categoria", FormFieldType.SELECT, true, 1, null);
-    CreateFormRequest request =
-        new CreateFormRequest("Formulário", null, 2026, null, null, List.of(selectField));
+    FormFieldRequest selectField = new FormFieldRequest("Categoria", FormFieldType.SELECT, true, 1,
+        null);
+    CreateFormRequest request = new CreateFormRequest("Formulário", null, 2026, null, null,
+        List.of(selectField));
     assertThrows(IllegalArgumentException.class, () -> service.create(request));
   }
 
