@@ -8,6 +8,7 @@ import com.bethelreport.backend.TestcontainersConfiguration;
 import com.bethelreport.backend.message.config.RabbitMqConfig;
 import com.bethelreport.backend.message.dtos.EmailMessage;
 import com.bethelreport.backend.message.publishers.EmailPublisher;
+import com.rabbitmq.client.GetResponse;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
@@ -56,5 +57,23 @@ class RabbitMqIntegrationTest {
     String body = new String(raw.getBody());
     assertTrue(body.contains("test@example.com"));
     assertTrue(body.contains("Test Subject"));
+  }
+
+  @Test
+  void rejectedMessageIsRoutedToDeadLetterQueue() {
+    rabbitTemplate.convertAndSend(RabbitMqConfig.EMAIL_EXCHANGE, RabbitMqConfig.EMAIL_ROUTING_KEY,
+        new EmailMessage("dlq@example.com", "DLQ Test", "test-template", Map.of("key", "value")));
+
+    rabbitTemplate.execute(channel -> {
+      GetResponse response = channel.basicGet(RabbitMqConfig.EMAIL_QUEUE, false);
+      assertNotNull(response, "Message should be in email.queue");
+      channel.basicReject(response.getEnvelope().getDeliveryTag(), false);
+      return null;
+    });
+
+    Message dlqMessage = rabbitTemplate.receive(RabbitMqConfig.EMAIL_DLQ,
+        TimeUnit.SECONDS.toMillis(5));
+    assertNotNull(dlqMessage, "Rejected message should arrive in email.dlq");
+    assertTrue(new String(dlqMessage.getBody()).contains("dlq@example.com"));
   }
 }
