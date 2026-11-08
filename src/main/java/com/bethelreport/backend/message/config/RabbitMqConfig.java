@@ -65,12 +65,6 @@ public class RabbitMqConfig {
   RabbitTemplateCustomizer rabbitTemplateCustomizer() {
     return template -> {
       template.setObservationEnabled(true);
-      template.setConfirmCallback((correlationData, ack, cause) -> {
-        if (!ack) {
-          LOG.error("Mensagem nao confirmada pelo broker: correlationData={}, causa={}",
-              correlationData, cause);
-        }
-      });
       template.setReturnsCallback(returned -> LOG.warn(
           "Mensagem retornada: exchange={}, routingKey={}, replyCode={}, replyText={}",
           returned.getExchange(), returned.getRoutingKey(), returned.getReplyCode(),
