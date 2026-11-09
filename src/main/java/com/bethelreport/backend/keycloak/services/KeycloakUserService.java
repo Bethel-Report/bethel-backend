@@ -31,4 +31,8 @@ public class KeycloakUserService {
 
     return adminClient.createUser(request);
   }
+
+  public void sendInvitationActionsEmail(String userId) {
+    adminClient.sendExecuteActionsEmail(userId, List.of("VERIFY_EMAIL", "UPDATE_PASSWORD"));
+  }
 }

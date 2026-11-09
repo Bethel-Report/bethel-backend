@@ -61,6 +61,12 @@ public class KeycloakAdminClient {
 
   }
 
+  public void sendExecuteActionsEmail(String userId, List<String> actions) {
+    restClient.put().uri("/users/{id}/execute-actions-email", userId)
+        .headers(headers -> headers.setBearerAuth(tokenService.getAccessToken()))
+        .contentType(MediaType.APPLICATION_JSON).body(actions).retrieve().toBodilessEntity();
+  }
+
   public void deleteUser(String userId) {
     restClient.method(HttpMethod.DELETE).uri("/users/{id}", userId)
         .headers(headers -> headers.setBearerAuth(tokenService.getAccessToken())).retrieve()

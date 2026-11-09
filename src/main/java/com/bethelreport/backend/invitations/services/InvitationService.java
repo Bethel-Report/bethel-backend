@@ -11,13 +11,10 @@ import com.bethelreport.backend.invitations.entities.InvitationStatus;
 import com.bethelreport.backend.invitations.mappers.InvitationMapper;
 import com.bethelreport.backend.invitations.repositories.InvitationRepository;
 import com.bethelreport.backend.keycloak.services.KeycloakUserService;
-import com.bethelreport.backend.message.dtos.EmailMessage;
-import com.bethelreport.backend.message.publishers.EmailPublisher;
 import com.bethelreport.backend.permissions.entities.Role;
 import com.bethelreport.backend.permissions.services.AuthorizationService;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
@@ -34,18 +31,15 @@ public class InvitationService {
   private final InvitationMapper invitationMapper;
   private final AuthorizationService authorizationService;
   private final BethelRepository bethelRepository;
-  private final EmailPublisher emailPublisher;
   private final KeycloakUserService keycloakUserService;
 
   public InvitationService(InvitationRepository invitationRepository,
       InvitationMapper invitationMapper, AuthorizationService authorizationService,
-      BethelRepository bethelRepository, EmailPublisher emailPublisher,
-      KeycloakUserService keycloakUserService) {
+      BethelRepository bethelRepository, KeycloakUserService keycloakUserService) {
     this.invitationRepository = invitationRepository;
     this.invitationMapper = invitationMapper;
     this.authorizationService = authorizationService;
     this.bethelRepository = bethelRepository;
-    this.emailPublisher = emailPublisher;
     this.keycloakUserService = keycloakUserService;
   }
 
@@ -65,7 +59,7 @@ public class InvitationService {
     registerKeycloakCompensation(keycloakUserId);
     saved.setKeycloakUserId(keycloakUserId);
     saved = invitationRepository.save(saved);
-    publishInvitationEmail(saved);
+    keycloakUserService.sendInvitationActionsEmail(keycloakUserId);
 
     return invitationMapper.toResponse(saved);
   }
@@ -81,12 +75,6 @@ public class InvitationService {
     if (invitationRepository.existsByEmailIgnoreCase(request.email())) {
       throw new DuplicateEmailException(request.email());
     }
-  }
-
-  private void publishInvitationEmail(Invitation invitation) {
-    emailPublisher
-        .publish(new EmailMessage(invitation.getEmail(), "Convite para acessar o Bethel Report",
-            "invitation", Map.of("invitationLink", "link para aceitar o convite")));
   }
 
   private void registerKeycloakCompensation(String keycloakUserId) {
