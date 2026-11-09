@@ -8,6 +8,7 @@ import jakarta.validation.constraints.Size;
 import java.util.List;
 
 public record FormFieldRequest(@NotBlank @Size(max = 300) String label, @NotNull FormFieldType type,
-    @NotNull Boolean required, @NotNull @Positive Integer displayOrder,
+    @NotNull Boolean required, @Size(max = 200) String section, @Size(max = 200) String key,
+    Boolean financial, String validationRules, @NotNull @Positive Integer displayOrder,
     List<@NotBlank String> options) {
 }

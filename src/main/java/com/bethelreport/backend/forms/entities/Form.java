@@ -43,6 +43,10 @@ public class Form {
   private LocalDate closingDate;
   @Column(name = "cloned_from_id")
   private Long clonedFromId;
+  @Column(nullable = false)
+  private Integer version = 1;
+  @Column(nullable = false)
+  private boolean active = true;
   @OneToMany(mappedBy = "form", cascade = CascadeType.ALL, orphanRemoval = true)
   @OrderBy("displayOrder ASC")
   private List<FormField> fields = new ArrayList<>();

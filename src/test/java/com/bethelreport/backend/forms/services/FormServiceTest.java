@@ -56,8 +56,8 @@ class FormServiceTest {
   @Test
   void createsFormWithSelectFieldOptions() {
     saveReturnsArgument();
-    FormFieldRequest selectField = new FormFieldRequest("Categoria", FormFieldType.SELECT, true, 1,
-        List.of("A", "B", "C"));
+    FormFieldRequest selectField = new FormFieldRequest("Categoria", FormFieldType.SELECT, true,
+        null, null, null, null, 1, List.of("A", "B", "C"));
     CreateFormRequest request = new CreateFormRequest("Formulário", null, 2026,
         LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 31), List.of(selectField));
     FormResponse result = service.create(request);
@@ -74,8 +74,8 @@ class FormServiceTest {
 
   @Test
   void rejectsSelectFieldWithoutOptions() {
-    FormFieldRequest selectField = new FormFieldRequest("Categoria", FormFieldType.SELECT, true, 1,
-        null);
+    FormFieldRequest selectField = new FormFieldRequest("Categoria", FormFieldType.SELECT, true,
+        null, null, null, null, 1, null);
     CreateFormRequest request = new CreateFormRequest("Formulário", null, 2026, null, null,
         List.of(selectField));
     assertThrows(IllegalArgumentException.class, () -> service.create(request));
@@ -89,7 +89,8 @@ class FormServiceTest {
 
     UpdateFormRequest request = new UpdateFormRequest("Nome Atualizado", "Descrição", 2026,
         LocalDate.of(2026, 2, 1), LocalDate.of(2026, 4, 30),
-        List.of(new FormFieldRequest("Campo Novo", FormFieldType.TEXT, false, 1, null)));
+        List.of(new FormFieldRequest("Campo Novo", FormFieldType.TEXT, false, null, null, null,
+            null, 1, null)));
 
     FormResponse result = service.update(1L, request);
     assertEquals("Nome Atualizado", result.name());
@@ -219,7 +220,8 @@ class FormServiceTest {
   }
 
   private FormFieldRequest fieldRequest() {
-    return new FormFieldRequest("Reuniões realizadas", FormFieldType.NUMBER, true, 1, null);
+    return new FormFieldRequest("Reuniões realizadas", FormFieldType.NUMBER, true, null, null, null,
+        null, 1, null);
   }
 
   private Form draftForm(Long id) {

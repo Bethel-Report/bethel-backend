@@ -39,6 +39,14 @@ public class FormField {
   private FormFieldType type;
   @Column(nullable = false)
   private boolean required;
+  @Column(length = 200)
+  private String section;
+  @Column(length = 200)
+  private String key;
+  @Column(nullable = false)
+  private boolean financial;
+  @Column(name = "validation_rules", columnDefinition = "text")
+  private String validationRules;
   @Column(name = "display_order", nullable = false)
   private Integer displayOrder;
   @ElementCollection

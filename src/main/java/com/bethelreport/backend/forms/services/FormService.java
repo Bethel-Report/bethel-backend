@@ -155,6 +155,10 @@ public class FormService {
     field.setLabel(request.label());
     field.setType(request.type());
     field.setRequired(request.required());
+    field.setSection(request.section());
+    field.setKey(request.key());
+    field.setFinancial(request.financial() != null && request.financial());
+    field.setValidationRules(request.validationRules());
     field.setDisplayOrder(request.displayOrder());
     if (request.options() != null) {
       field.setOptions(new ArrayList<>(request.options()));
@@ -168,6 +172,10 @@ public class FormService {
     field.setLabel(source.getLabel());
     field.setType(source.getType());
     field.setRequired(source.isRequired());
+    field.setSection(source.getSection());
+    field.setKey(source.getKey());
+    field.setFinancial(source.isFinancial());
+    field.setValidationRules(source.getValidationRules());
     field.setDisplayOrder(source.getDisplayOrder());
     if (source.getOptions() != null && !source.getOptions().isEmpty()) {
       field.setOptions(new ArrayList<>(source.getOptions()));
