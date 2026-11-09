@@ -7,5 +7,6 @@ import java.util.List;
 
 public record FormResponse(Long id, String name, String description, Integer referenceYear,
     FormStatus status, LocalDate openingDate, LocalDate closingDate, Long clonedFromId,
-    List<FormFieldResponse> fields, LocalDateTime createdAt, LocalDateTime updatedAt) {
+    Integer version, boolean active, List<FormFieldResponse> fields, LocalDateTime createdAt,
+    LocalDateTime updatedAt) {
 }

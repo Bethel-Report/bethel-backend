@@ -110,8 +110,8 @@ class FormControllerTest {
   @Test
   void publishesFormWithGrandeConselho() throws Exception {
     FormResponse published = new FormResponse(1L, "Relatório Anual 2026", null, 2026,
-        FormStatus.PUBLISHED, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 31), null, List.of(),
-        LocalDateTime.now(), LocalDateTime.now());
+        FormStatus.PUBLISHED, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 31), null, 1, true,
+        List.of(), LocalDateTime.now(), LocalDateTime.now());
     when(formService.publish(1L)).thenReturn(published);
     mvc.perform(patch(BASE + "/1/publish").with(admittedJwt())).andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("PUBLISHED"));
@@ -120,8 +120,8 @@ class FormControllerTest {
   @Test
   void closesFormWithGrandeConselho() throws Exception {
     FormResponse closed = new FormResponse(1L, "Relatório Anual 2026", null, 2026,
-        FormStatus.CLOSED, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 31), null, List.of(),
-        LocalDateTime.now(), LocalDateTime.now());
+        FormStatus.CLOSED, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 31), null, 1, true,
+        List.of(), LocalDateTime.now(), LocalDateTime.now());
     when(formService.close(1L)).thenReturn(closed);
     mvc.perform(patch(BASE + "/1/close").with(admittedJwt())).andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("CLOSED"));
@@ -180,9 +180,9 @@ class FormControllerTest {
 
   private FormResponse formResponse() {
     FormFieldResponse field = new FormFieldResponse(1L, "Reuniões realizadas", FormFieldType.NUMBER,
-        true, 1, List.of());
+        true, null, null, false, null, 1, List.of());
     return new FormResponse(1L, "Relatório Anual 2026", null, 2026, FormStatus.DRAFT,
-        LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 31), null, List.of(field),
+        LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 31), null, 1, true, List.of(field),
         LocalDateTime.now(), LocalDateTime.now());
   }
 
