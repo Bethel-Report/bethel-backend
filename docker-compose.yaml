@@ -20,8 +20,6 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
 
     networks:
       - net1
@@ -95,30 +93,10 @@ services:
     networks:
       - net1
 
-  rabbitmq:
-    image: rabbitmq:4.1-management-alpine
-    container_name: backend-rabbitmq
-    environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-    networks:
-      - net1
-
 volumes:
   minio_data:
   postgres_data:
   keycloak_data:
-  rabbitmq_data:
 
 networks:
   net1:
