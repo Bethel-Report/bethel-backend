@@ -66,8 +66,8 @@ services:
 
   keycloak:
     build:
-      context: ../TesteEmailSender
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: docker/keycloak/Dockerfile
     container_name: backend-keycloak
     command: start --optimized
     environment:
