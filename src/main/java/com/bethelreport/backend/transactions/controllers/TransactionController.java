@@ -46,8 +46,7 @@ public class TransactionController {
       @RequestParam(required = false) @DateTimeFormat(iso = DATE) LocalDate endDate,
       @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size,
       Authentication authentication) {
-    return TransactionPage
-        .from(service.list(bethelId, type, startDate, endDate, page, size, authentication));
+    return service.list(bethelId, type, startDate, endDate, page, size, authentication);
   }
 
   @GetMapping("/{id}")
