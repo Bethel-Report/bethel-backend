@@ -69,12 +69,18 @@ services:
       context: .
       dockerfile: docker/keycloak/Dockerfile
     container_name: backend-keycloak
-    command: start --optimized
+    command:
+      - start
+      - --optimized
+      - --import-realm
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
       KC_HTTP_ENABLED: "true"
       KC_HOSTNAME: http://localhost:8081
+      KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: 5672
       RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:?Set RABBITMQ_USERNAME in backend/.env}
@@ -86,6 +92,8 @@ services:
       - "8081:8080"
     volumes:
       - keycloak_data:/opt/keycloak/data
+      - ./keycloak/realm:/opt/keycloak/data/import
+      - ./keycloak/export:/opt/keycloak/data/export
     networks:
       - net1
 
