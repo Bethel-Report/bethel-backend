@@ -17,6 +17,7 @@ import com.bethelreport.backend.exceptions.UserNotFoundException;
 import com.bethelreport.backend.invitations.entities.Invitation;
 import com.bethelreport.backend.invitations.entities.InvitationStatus;
 import com.bethelreport.backend.invitations.repositories.InvitationRepository;
+import com.bethelreport.backend.keycloak.services.KeycloakUserService;
 import com.bethelreport.backend.permissions.entities.Permission;
 import com.bethelreport.backend.permissions.entities.Role;
 import com.bethelreport.backend.permissions.repositories.PermissionRepository;
@@ -37,6 +38,8 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -50,8 +53,10 @@ class UserServiceTest {
   private final AuthorizationService authorizationService = mock(AuthorizationService.class);
   private final InvitationRepository invitationRepository = mock(InvitationRepository.class);
   private final PermissionRepository permissionRepository = mock(PermissionRepository.class);
+  private final KeycloakUserService keycloakUserService = mock(KeycloakUserService.class);
   private final UserService userService = new UserService(userRepository, userMapper,
-      permissionService, authorizationService, invitationRepository, permissionRepository);
+      permissionService, authorizationService, invitationRepository, permissionRepository,
+      keycloakUserService);
   private final Authentication authentication = authentication("council@example.com");
 
   @BeforeEach
@@ -69,7 +74,7 @@ class UserServiceTest {
         LocalDate.of(1990, 1, 1), "City", "Address", true, false, true, false);
 
     when(userRepository.existsByEmailIgnoreCase("user@example.com")).thenReturn(false);
-    when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+    when(userRepository.saveAndFlush(any(User.class))).thenAnswer(invocation -> {
       User saved = invocation.getArgument(0);
       saved.setId(1L);
       return saved;
@@ -77,7 +82,10 @@ class UserServiceTest {
     when(invitationRepository.findByEmailIgnoreCaseAndStatus("user@example.com",
         InvitationStatus.PENDING)).thenReturn(Optional.empty());
 
+    when(keycloakUserService.provisionUser("user@example.com", "Test User", null))
+        .thenReturn("new-identity");
     UserResponse response = userService.createUser(request);
+    verify(keycloakUserService).sendInvitationActionsEmail("new-identity");
 
     assertEquals(1L, response.id());
     assertEquals("user@example.com", response.email());
@@ -96,11 +104,12 @@ class UserServiceTest {
 
     Invitation pendingInvitation = new Invitation();
     pendingInvitation.setId(10L);
+    pendingInvitation.setKeycloakUserId("invited-identity");
     pendingInvitation.setEmail("invited@example.com");
     pendingInvitation.setStatus(InvitationStatus.PENDING);
 
     when(userRepository.existsByEmailIgnoreCase("invited@example.com")).thenReturn(false);
-    when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+    when(userRepository.saveAndFlush(any(User.class))).thenAnswer(invocation -> {
       User saved = invocation.getArgument(0);
       saved.setId(2L);
       return saved;
@@ -114,6 +123,8 @@ class UserServiceTest {
 
     assertEquals(InvitationStatus.ACCEPTED, pendingInvitation.getStatus());
     verify(invitationRepository).save(pendingInvitation);
+    verify(keycloakUserService).sendInvitationActionsEmail("invited-identity");
+    verify(keycloakUserService, never()).provisionUser(any(), any(), any());
   }
 
   @Test
@@ -125,6 +136,66 @@ class UserServiceTest {
 
     assertThrows(DuplicateEmailException.class, () -> userService.createUser(request));
     verify(userRepository, never()).save(any());
+  }
+
+  @Test
+  void removesNewIdentityOnRollbackAfterEmailFailure() {
+    CreateUserRequest request = new CreateUserRequest("new@example.com", "New User",
+        LocalDate.of(1990, 1, 1), "City", "Address", false, false, false, false);
+    when(keycloakUserService.provisionUser("new@example.com", "New User", null))
+        .thenReturn("new-identity");
+    when(userRepository.saveAndFlush(any(User.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+    Mockito.doThrow(new IllegalStateException("Email unavailable")).when(keycloakUserService)
+        .sendInvitationActionsEmail("new-identity");
+
+    TransactionSynchronizationManager.initSynchronization();
+    try {
+      assertThrows(IllegalStateException.class, () -> userService.createUser(request));
+      verify(userRepository).saveAndFlush(any(User.class));
+      for (TransactionSynchronization synchronization : TransactionSynchronizationManager
+          .getSynchronizations()) {
+        synchronization.afterCompletion(TransactionSynchronization.STATUS_ROLLED_BACK);
+      }
+      verify(keycloakUserService).deleteUser("new-identity");
+    } finally {
+      TransactionSynchronizationManager.clearSynchronization();
+    }
+  }
+
+  @Test
+  void doesNotSendEmailWhenPersistenceFails() {
+    CreateUserRequest request = new CreateUserRequest("new@example.com", "New User",
+        LocalDate.of(1990, 1, 1), "City", "Address", false, false, false, false);
+    when(keycloakUserService.provisionUser("new@example.com", "New User", null))
+        .thenReturn("new-identity");
+    when(userRepository.saveAndFlush(any(User.class)))
+        .thenThrow(new IllegalStateException("Database unavailable"));
+
+    assertThrows(IllegalStateException.class, () -> userService.createUser(request));
+    verify(keycloakUserService, never()).sendInvitationActionsEmail(any());
+  }
+
+  @Test
+  void doesNotDeleteExistingInvitationIdentityOnRollback() {
+    CreateUserRequest request = new CreateUserRequest("invited@example.com", "Invited User",
+        LocalDate.of(1990, 1, 1), "City", "Address", false, false, false, false);
+    Invitation invitation = new Invitation();
+    invitation.setKeycloakUserId("existing-identity");
+    when(invitationRepository.findByEmailIgnoreCaseAndStatus(request.email(),
+        InvitationStatus.PENDING)).thenReturn(Optional.of(invitation));
+    Mockito.doThrow(new IllegalStateException("Email unavailable")).when(keycloakUserService)
+        .sendInvitationActionsEmail("existing-identity");
+
+    TransactionSynchronizationManager.initSynchronization();
+    try {
+      assertThrows(IllegalStateException.class, () -> userService.createUser(request));
+      assertTrue(TransactionSynchronizationManager.getSynchronizations().isEmpty());
+      verify(keycloakUserService, never()).deleteUser(any());
+      verify(keycloakUserService, never()).provisionUser(any(), any(), any());
+    } finally {
+      TransactionSynchronizationManager.clearSynchronization();
+    }
   }
 
   @Test

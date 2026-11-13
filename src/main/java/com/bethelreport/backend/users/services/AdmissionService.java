@@ -69,6 +69,8 @@ public class AdmissionService {
     user.setEmail(email);
     user.setKeycloakUserId(keycloakUserId);
 
+    user = userRepository.save(user);
+
     Permission permission = new Permission();
     permission.setUser(user);
     permission.setRole(invitation.getRole());
@@ -76,8 +78,6 @@ public class AdmissionService {
     permission.setActive(true);
 
     permissionRepository.save(permission);
-
-    userRepository.save(user);
 
     invitation.setStatus(InvitationStatus.ACCEPTED);
 
