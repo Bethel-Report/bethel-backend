@@ -24,6 +24,7 @@ import com.bethelreport.backend.security.config.SecurityConfig;
 import com.bethelreport.backend.transactions.controllers.TransactionController;
 import com.bethelreport.backend.transactions.entities.FinancialTransaction;
 import com.bethelreport.backend.transactions.entities.TransactionType;
+import com.bethelreport.backend.transactions.mappers.TransactionMapperImpl;
 import com.bethelreport.backend.transactions.repositories.TransactionRepository;
 import com.bethelreport.backend.transactions.services.TransactionService;
 import com.bethelreport.backend.users.entities.User;
@@ -51,7 +52,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 @WebMvcTest(TransactionController.class)
-@Import({SecurityConfig.class, AuthorizationService.class, TransactionService.class})
+@Import({SecurityConfig.class, AuthorizationService.class, TransactionService.class,
+    TransactionMapperImpl.class})
 class TransactionControllerTest {
   private static final String URL = "/api/bethels/10/transactions";
   private static final String BODY = """

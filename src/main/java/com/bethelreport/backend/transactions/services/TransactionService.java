@@ -2,10 +2,12 @@ package com.bethelreport.backend.transactions.services;
 
 import com.bethelreport.backend.bethel.repositories.BethelRepository;
 import com.bethelreport.backend.permissions.services.AuthorizationService;
+import com.bethelreport.backend.transactions.dtos.TransactionPage;
 import com.bethelreport.backend.transactions.dtos.TransactionRequest;
 import com.bethelreport.backend.transactions.dtos.TransactionResponse;
 import com.bethelreport.backend.transactions.entities.FinancialTransaction;
 import com.bethelreport.backend.transactions.entities.TransactionType;
+import com.bethelreport.backend.transactions.mappers.TransactionMapper;
 import com.bethelreport.backend.transactions.repositories.TransactionFilters;
 import com.bethelreport.backend.transactions.repositories.TransactionRepository;
 import com.bethelreport.backend.users.repositories.UserRepository;
@@ -13,7 +15,6 @@ import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.access.AccessDeniedException;
@@ -31,20 +32,22 @@ public class TransactionService {
   private final BethelRepository bethels;
   private final UserRepository users;
   private final AuthorizationService authorization;
+  private final TransactionMapper mapper;
 
   public TransactionService(TransactionRepository repository, BethelRepository bethels,
-      UserRepository users, AuthorizationService authorization) {
+      UserRepository users, AuthorizationService authorization, TransactionMapper mapper) {
     this.repository = repository;
     this.bethels = bethels;
     this.users = users;
     this.authorization = authorization;
+    this.mapper = mapper;
   }
 
   @Transactional
   public TransactionResponse create(Long bethelId, @Valid TransactionRequest request,
       Authentication authentication) {
     requireAccess(bethelId, authentication);
-    FinancialTransaction entity = new FinancialTransaction();
+    FinancialTransaction entity = mapper.toEntity(request);
     entity.setBethel(bethels.findById(bethelId)
         .orElseThrow(() -> new EntityNotFoundException("Bethel não encontrado.")));
     if (!(authentication instanceof JwtAuthenticationToken jwt)) {
@@ -54,26 +57,25 @@ public class TransactionService {
     entity.setAuthor(users.findByEmailIgnoreCase(email)
         .orElseThrow(() -> new AccessDeniedException("Usuário não encontrado.")));
     entity.setCreatedAt(LocalDateTime.now());
-    apply(entity, request);
-    return TransactionResponse.from(repository.save(entity));
+    entity.setUpdatedAt(LocalDateTime.now());
+    return mapper.toResponse(repository.save(entity));
   }
 
-  public Page<TransactionResponse> list(Long bethelId, TransactionType type, LocalDate startDate,
+  public TransactionPage list(Long bethelId, TransactionType type, LocalDate startDate,
       LocalDate endDate, int page, int size, Authentication authentication) {
     requireAccess(bethelId, authentication);
     validateQuery(startDate, endDate, page, size);
     if (!bethels.existsById(bethelId)) {
       throw new EntityNotFoundException("Bethel não encontrado.");
     }
-    return repository
-        .findAll(TransactionFilters.by(bethelId, type, startDate, endDate),
-            PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "transactionDate", "id")))
-        .map(TransactionResponse::from);
+    return mapper
+        .toPage(repository.findAll(TransactionFilters.by(bethelId, type, startDate, endDate),
+            PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "transactionDate", "id"))));
   }
 
   public TransactionResponse get(Long bethelId, Long id, Authentication authentication) {
     requireAccess(bethelId, authentication);
-    return TransactionResponse.from(find(bethelId, id));
+    return mapper.toResponse(find(bethelId, id));
   }
 
   @Transactional
@@ -81,8 +83,9 @@ public class TransactionService {
       Authentication authentication) {
     requireAccess(bethelId, authentication);
     FinancialTransaction entity = find(bethelId, id);
-    apply(entity, request);
-    return TransactionResponse.from(repository.save(entity));
+    mapper.updateEntity(request, entity);
+    entity.setUpdatedAt(LocalDateTime.now());
+    return mapper.toResponse(repository.save(entity));
   }
 
   @Transactional
@@ -112,11 +115,4 @@ public class TransactionService {
     }
   }
 
-  private void apply(FinancialTransaction entity, TransactionRequest request) {
-    entity.setType(request.type());
-    entity.setAmount(request.amount());
-    entity.setTransactionDate(request.transactionDate());
-    entity.setDescription(request.description().trim());
-    entity.setUpdatedAt(LocalDateTime.now());
-  }
 }
