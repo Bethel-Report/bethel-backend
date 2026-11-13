@@ -52,7 +52,9 @@ public class InvitationService {
 
     if (request.bethelId() != null && request.role() != Role.GRANDE_CONSELHO) {
 
-      authorizationService.canAssignRole(authentication, request.role(), request.bethelId());
+      if (!authorizationService.canAssignRole(authentication, request.role(), request.bethelId())) {
+        throw new AccessDeniedException("Você não pode convidar este perfil para o Bethel.");
+      }
 
       Bethel bethel = bethelRepository.getReferenceById(request.bethelId());
 
