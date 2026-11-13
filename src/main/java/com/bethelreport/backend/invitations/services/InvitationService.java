@@ -10,18 +10,19 @@ import com.bethelreport.backend.invitations.entities.Invitation;
 import com.bethelreport.backend.invitations.entities.InvitationStatus;
 import com.bethelreport.backend.invitations.mappers.InvitationMapper;
 import com.bethelreport.backend.invitations.repositories.InvitationRepository;
-import com.bethelreport.backend.message.dtos.EmailMessage;
-import com.bethelreport.backend.message.publishers.EmailPublisher;
+import com.bethelreport.backend.keycloak.services.KeycloakUserService;
 import com.bethelreport.backend.permissions.entities.Role;
 import com.bethelreport.backend.permissions.services.AuthorizationService;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
@@ -30,45 +31,77 @@ public class InvitationService {
   private final InvitationMapper invitationMapper;
   private final AuthorizationService authorizationService;
   private final BethelRepository bethelRepository;
-  private final EmailPublisher emailPublisher;
+  private final KeycloakUserService keycloakUserService;
 
   public InvitationService(InvitationRepository invitationRepository,
       InvitationMapper invitationMapper, AuthorizationService authorizationService,
-      BethelRepository bethelRepository, EmailPublisher emailPublisher) {
+      BethelRepository bethelRepository, KeycloakUserService keycloakUserService) {
     this.invitationRepository = invitationRepository;
     this.invitationMapper = invitationMapper;
     this.authorizationService = authorizationService;
     this.bethelRepository = bethelRepository;
-    this.emailPublisher = emailPublisher;
+    this.keycloakUserService = keycloakUserService;
   }
 
+  @Transactional
   public InvitationResponse createInvitation(CreateInvitationRequest request,
+      Authentication authentication) {
+    validateInvitationRequest(request, authentication);
+
+    Invitation invitation = invitationMapper.toEntity(request);
+
+    if (request.bethelId() != null && request.role() != Role.GRANDE_CONSELHO) {
+
+      if (!authorizationService.canAssignRole(authentication, request.role(), request.bethelId())) {
+        throw new AccessDeniedException("Você não pode convidar este perfil para o Bethel.");
+      }
+
+      Bethel bethel = bethelRepository.getReferenceById(request.bethelId());
+
+      invitation.setBethel(bethel);
+
+    } else {
+      authorizationService.isGrandeConselho(authentication);
+    }
+
+    invitation.setStatus(InvitationStatus.PENDING);
+    invitation.setCreatedAt(LocalDateTime.now());
+
+    Invitation saved = invitationRepository.save(invitation);
+    String keycloakUserId = keycloakUserService.provisionUser(saved.getEmail(), null, null);
+    registerKeycloakCompensation(keycloakUserId);
+    saved.setKeycloakUserId(keycloakUserId);
+    saved = invitationRepository.save(saved);
+    keycloakUserService.sendInvitationActionsEmail(keycloakUserId);
+
+    return invitationMapper.toResponse(saved);
+  }
+
+  private void validateInvitationRequest(CreateInvitationRequest request,
       Authentication authentication) {
     if (!bethelRepository.existsById(request.bethelId())) {
       throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Bethel não encontrado.");
     }
-
     if (!authorizationService.canManageBethel(request.bethelId(), authentication)) {
       throw new AccessDeniedException("Você não pode convidar para este Bethel.");
     }
-
     if (invitationRepository.existsByEmailIgnoreCase(request.email())) {
       throw new DuplicateEmailException(request.email());
     }
+  }
 
-    final Bethel bethel = bethelRepository.getReferenceById(request.bethelId());
-    Invitation invitation = invitationMapper.toEntity(request);
-    invitation.setStatus(InvitationStatus.PENDING);
-    invitation.setCreatedAt(LocalDateTime.now());
-    invitation.setBethel(bethel);
-
-    Invitation saved = invitationRepository.save(invitation);
-
-    emailPublisher
-        .publish(new EmailMessage(saved.getEmail(), "Convite para acessar o Bethel Report",
-            "invitation", Map.of("invitationLink", "link para aceitar o convite")));
-
-    return invitationMapper.toResponse(saved);
+  private void registerKeycloakCompensation(String keycloakUserId) {
+    if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+      return;
+    }
+    TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+      @Override
+      public void afterCompletion(int status) {
+        if (status == STATUS_ROLLED_BACK) {
+          keycloakUserService.deleteUser(keycloakUserId);
+        }
+      }
+    });
   }
 
   public List<InvitationResponse> listInvitations() {
