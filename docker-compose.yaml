@@ -11,6 +11,12 @@ services:
 
     environment:
       MINIO_ENDPOINT: http://minio:9000
+      BOOTSTRAP_ADMIN_ENABLED: ${BOOTSTRAP_ADMIN_ENABLED:-true}
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-admin@bethelreport.local}
+      KEYCLOAK_ISSUER_URI: http://localhost:8081/realms/bethel-report
+      KEYCLOAK_SERVICE_URL: http://keycloak:8080/realms/bethel-report/protocol/openid-connect/certs
+      FRONTEND_CLIENT_ID: ${FRONTEND_CLIENT_ID:-bethel-report-frontend}
+      INVITATION_REDIRECT_URL: ${INVITATION_REDIRECT_URL:-http://localhost:3000/admission/complete}
       KEYCLOAK_ADMIN_SERVER_URL: http://keycloak:8080
       KEYCLOAK_ADMIN_REALM: bethel-report
       KEYCLOAK_ADMIN_CLIENT_ID: bethel-backend-admin
@@ -24,6 +30,8 @@ services:
       - "8080:8080"
 
     depends_on:
+      keycloak-init:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       minio:
@@ -64,6 +72,31 @@ services:
     networks:
       - net1
 
+  keycloak-init:
+    build:
+      context: .
+      dockerfile: docker/keycloak/Dockerfile
+    entrypoint: ["/bin/bash", "/opt/keycloak/bootstrap.sh"]
+    restart: "no"
+    depends_on:
+      keycloak:
+        condition: service_started
+    environment:
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET}
+      BOOTSTRAP_ADMIN_ENABLED: ${BOOTSTRAP_ADMIN_ENABLED:-true}
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-admin@bethelreport.local}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-BethelLocal-2026!}
+      FRONTEND_CLIENT_ID: ${FRONTEND_CLIENT_ID:-bethel-report-frontend}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      INVITATION_REDIRECT_URL: ${INVITATION_REDIRECT_URL:-http://localhost:3000/admission/complete}
+      KEYCLOAK_EMAIL_FROM: ${KEYCLOAK_EMAIL_FROM:-noreply@bethelreport.com}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+    networks:
+      - net1
+
   keycloak:
     build:
       context: .
@@ -76,6 +109,7 @@ services:
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      JAVA_OPTS_KC_HEAP: ${KEYCLOAK_JAVA_HEAP:--Xms128m -Xmx512m}
       KC_HTTP_ENABLED: "true"
       KC_HOSTNAME: http://localhost:8081
       KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET}
