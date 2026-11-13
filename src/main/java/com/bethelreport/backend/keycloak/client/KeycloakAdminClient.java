@@ -1,6 +1,7 @@
 package com.bethelreport.backend.keycloak.client;
 
 import com.bethelreport.backend.keycloak.config.KeycloakAdminProperties;
+import com.bethelreport.backend.keycloak.config.KeycloakInvitationProperties;
 import com.bethelreport.backend.keycloak.dtos.KeycloakUserRequest;
 import com.bethelreport.backend.keycloak.dtos.KeycloakUserResponse;
 import com.bethelreport.backend.keycloak.services.KeycloakAdminTokenService;
@@ -18,13 +19,15 @@ public class KeycloakAdminClient {
 
   private final RestClient restClient;
   private final KeycloakAdminTokenService tokenService;
+  private final KeycloakInvitationProperties invitationProperties;
 
   public KeycloakAdminClient(KeycloakAdminProperties properties,
-      KeycloakAdminTokenService tokenService) {
+      KeycloakAdminTokenService tokenService, KeycloakInvitationProperties invitationProperties) {
     this.restClient = RestClient.builder()
         .baseUrl(properties.serverUrl() + "/admin/realms/" + properties.realm()).build();
 
     this.tokenService = tokenService;
+    this.invitationProperties = invitationProperties;
   }
 
   public List<KeycloakUserResponse> findUsers() {
@@ -62,7 +65,11 @@ public class KeycloakAdminClient {
   }
 
   public void sendExecuteActionsEmail(String userId, List<String> actions) {
-    restClient.put().uri("/users/{id}/execute-actions-email", userId)
+    restClient.put()
+        .uri(uriBuilder -> uriBuilder.path("/users/{id}/execute-actions-email")
+            .queryParam("client_id", invitationProperties.clientId())
+            .queryParam("redirect_uri", invitationProperties.redirectUri())
+            .queryParam("lifespan", invitationProperties.lifespan()).build(userId))
         .headers(headers -> headers.setBearerAuth(tokenService.getAccessToken()))
         .contentType(MediaType.APPLICATION_JSON).body(actions).retrieve().toBodilessEntity();
   }

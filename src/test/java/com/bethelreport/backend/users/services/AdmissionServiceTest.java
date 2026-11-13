@@ -9,7 +9,6 @@ import com.bethelreport.backend.invitations.entities.InvitationStatus;
 import com.bethelreport.backend.invitations.repositories.InvitationRepository;
 import com.bethelreport.backend.users.entities.User;
 import com.bethelreport.backend.users.mappers.UserMapper;
-import com.bethelreport.backend.users.services.UserService;
 import com.bethelreport.backend.permissions.repositories.PermissionRepository;
 import com.bethelreport.backend.users.repositories.UserRepository;
 import java.util.Optional;

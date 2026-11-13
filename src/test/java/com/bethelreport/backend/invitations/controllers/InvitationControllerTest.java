@@ -83,7 +83,8 @@ class InvitationControllerTest {
 
   @Test
   void createInvitationReturnsCreated() throws Exception {
-    CreateInvitationRequest request = new CreateInvitationRequest("invited@example.com", 10L, Role.MEMBRO_ATIVO);
+    CreateInvitationRequest request = new CreateInvitationRequest("invited@example.com", 10L,
+        Role.MEMBRO_ATIVO);
     InvitationResponse response = new InvitationResponse(1L, "invited@example.com",
         InvitationStatus.PENDING, LocalDateTime.of(2026, 10, 31, 10, 0), 10L);
 
@@ -111,7 +112,8 @@ class InvitationControllerTest {
 
   @Test
   void createInvitationWithDuplicateEmailReturnsConflict() throws Exception {
-    CreateInvitationRequest request = new CreateInvitationRequest("dup@example.com", 10L, Role.MEMBRO_ATIVO);
+    CreateInvitationRequest request = new CreateInvitationRequest("dup@example.com", 10L,
+        Role.MEMBRO_ATIVO);
 
     when(invitationService.createInvitation(any(CreateInvitationRequest.class),
         any(Authentication.class))).thenThrow(new DuplicateEmailException("dup@example.com"));
@@ -124,7 +126,8 @@ class InvitationControllerTest {
 
   @Test
   void createInvitationForAnotherBethelReturnsForbidden() throws Exception {
-    CreateInvitationRequest request = new CreateInvitationRequest("new@example.com", 20L, Role.MEMBRO_ATIVO);
+    CreateInvitationRequest request = new CreateInvitationRequest("new@example.com", 20L,
+        Role.MEMBRO_ATIVO);
 
     when(invitationService.createInvitation(any(CreateInvitationRequest.class),
         any(Authentication.class)))
@@ -137,7 +140,8 @@ class InvitationControllerTest {
 
   @Test
   void createInvitationForMissingBethelReturnsNotFound() throws Exception {
-    CreateInvitationRequest request = new CreateInvitationRequest("new@example.com", 99L, Role.MEMBRO_ATIVO);
+    CreateInvitationRequest request = new CreateInvitationRequest("new@example.com", 99L,
+        Role.MEMBRO_ATIVO);
 
     when(invitationService.createInvitation(any(CreateInvitationRequest.class),
         any(Authentication.class)))
@@ -232,8 +236,8 @@ class InvitationControllerTest {
         .perform(post("/api/invitations")
             .with(jwt().jwt(token -> token.claim("email", "member@example.com")))
             .contentType(MediaType.APPLICATION_JSON)
-            .content(objectMapper
-                .writeValueAsString(new CreateInvitationRequest("new@example.com", 10L, Role.MEMBRO_ATIVO))))
+            .content(objectMapper.writeValueAsString(
+                new CreateInvitationRequest("new@example.com", 10L, Role.MEMBRO_ATIVO))))
         .andExpect(status().isForbidden());
   }
 }
