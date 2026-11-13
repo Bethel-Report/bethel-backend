@@ -48,11 +48,22 @@ public class InvitationService {
       Authentication authentication) {
     validateInvitationRequest(request, authentication);
 
-    Bethel bethel = bethelRepository.getReferenceById(request.bethelId());
     Invitation invitation = invitationMapper.toEntity(request);
+
+    if (request.bethelId() != null && request.role() != Role.GRANDE_CONSELHO) {
+
+      authorizationService.canAssignRole(authentication, request.role(), request.bethelId());
+
+      Bethel bethel = bethelRepository.getReferenceById(request.bethelId());
+
+      invitation.setBethel(bethel);
+
+    } else {
+      authorizationService.isGrandeConselho(authentication);
+    }
+
     invitation.setStatus(InvitationStatus.PENDING);
     invitation.setCreatedAt(LocalDateTime.now());
-    invitation.setBethel(bethel);
 
     Invitation saved = invitationRepository.save(invitation);
     String keycloakUserId = keycloakUserService.provisionUser(saved.getEmail(), null, null);
