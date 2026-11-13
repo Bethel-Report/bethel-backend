@@ -2,6 +2,7 @@ package com.bethelreport.backend.invitations.services;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -30,6 +31,7 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -46,7 +48,7 @@ class InvitationServiceTest {
   private final BethelRepository bethelRepository = mock(BethelRepository.class);
   private final KeycloakUserService keycloakUserService = mock(KeycloakUserService.class);
   private final InvitationService invitationService = new InvitationService(invitationRepository,
-      invitationMapper, authorizationService, bethelRepository, keycloakUserService);
+          invitationMapper, authorizationService, bethelRepository, keycloakUserService);
   private final Authentication authentication = authentication("council@example.com");
   private int invitationRepositorySaveCount;
 
@@ -57,10 +59,11 @@ class InvitationServiceTest {
     when(authorizationService.hasRole(authentication, Role.CONSELHO_DE_BETHEL)).thenReturn(true);
     when(authorizationService.getAuthorizedBethelId(authentication)).thenReturn(10L);
     when(authorizationService.canManageBethel(eq(10L), eq(authentication))).thenReturn(true);
+    when(authorizationService.canAssignRole(authentication, Role.MEMBRO_ATIVO, 10L)).thenReturn(true);
   }
 
   @Test
-  void createsInvitationSuccessfully() {
+  void createsInvitationWithCorrectRole() {
     CreateInvitationRequest request = new CreateInvitationRequest("new@example.com", 10L, Role.MEMBRO_ATIVO);
 
     when(bethelRepository.existsById(10L)).thenReturn(true);
@@ -81,9 +84,81 @@ class InvitationServiceTest {
     assertEquals(InvitationStatus.PENDING, response.status());
     assertEquals(10L, response.bethelId());
 
-    verify(invitationRepository, times(2)).save(any(Invitation.class));
+    ArgumentCaptor<Invitation> invitationCaptor = forClass(Invitation.class);
+    verify(invitationRepository, times(2)).save(invitationCaptor.capture());
+    assertEquals(Role.MEMBRO_ATIVO, invitationCaptor.getAllValues().getFirst().getRole());
     verify(keycloakUserService).provisionUser("new@example.com", null, null);
     verify(keycloakUserService).sendInvitationActionsEmail("kc-123");
+  }
+
+  @Test
+  void storesKeycloakUserId() {
+    CreateInvitationRequest request = new CreateInvitationRequest("new@example.com", 10L,
+            Role.MEMBRO_ATIVO);
+    when(bethelRepository.existsById(10L)).thenReturn(true);
+    when(bethelRepository.getReferenceById(10L)).thenReturn(buildBethel(10L));
+    when(invitationRepository.existsByEmailIgnoreCase("new@example.com")).thenReturn(false);
+    when(invitationRepository.save(any(Invitation.class))).thenAnswer(invocation -> {
+      Invitation saved = invocation.getArgument(0);
+      saved.setId(1L);
+      return saved;
+    });
+    when(keycloakUserService.provisionUser("new@example.com", null, null)).thenReturn("kc-123");
+
+    invitationService.createInvitation(request, authentication);
+
+    ArgumentCaptor<Invitation> invitationCaptor = forClass(Invitation.class);
+    verify(invitationRepository, times(2)).save(invitationCaptor.capture());
+    assertEquals("kc-123", invitationCaptor.getAllValues().getLast().getKeycloakUserId());
+  }
+
+  @Test
+  void rejectsInvitationWhenRoleIsNotAllowed() {
+    CreateInvitationRequest request = new CreateInvitationRequest("new@example.com", 10L,
+            Role.CONSELHO_DE_BETHEL);
+    when(bethelRepository.existsById(10L)).thenReturn(true);
+    when(authorizationService.canAssignRole(authentication, Role.CONSELHO_DE_BETHEL, 10L))
+            .thenReturn(false);
+
+    assertThrows(AccessDeniedException.class,
+            () -> invitationService.createInvitation(request, authentication));
+    verify(invitationRepository, never()).save(any());
+    verify(keycloakUserService, never()).provisionUser(any(), any(), any());
+  }
+
+  @Test
+  void rejectsInvitationForAnotherBethel() {
+    CreateInvitationRequest request = new CreateInvitationRequest("new@example.com", 20L,
+            Role.MEMBRO_ATIVO);
+    when(bethelRepository.existsById(20L)).thenReturn(true);
+    when(authorizationService.canManageBethel(20L, authentication)).thenReturn(false);
+
+    assertThrows(AccessDeniedException.class,
+            () -> invitationService.createInvitation(request, authentication));
+    verify(invitationRepository, never()).save(any());
+    verify(keycloakUserService, never()).provisionUser(any(), any(), any());
+  }
+
+  @Test
+  void doesNotSaveInvitationWhenKeycloakProvisionFails() {
+    CreateInvitationRequest request = new CreateInvitationRequest("new@example.com", 10L,
+            Role.MEMBRO_ATIVO);
+    when(bethelRepository.existsById(10L)).thenReturn(true);
+    when(bethelRepository.getReferenceById(10L)).thenReturn(buildBethel(10L));
+    when(invitationRepository.existsByEmailIgnoreCase("new@example.com")).thenReturn(false);
+    when(invitationRepository.save(any(Invitation.class))).thenAnswer(invocation -> {
+      Invitation saved = invocation.getArgument(0);
+      saved.setId(1L);
+      return saved;
+    });
+    when(keycloakUserService.provisionUser("new@example.com", null, null))
+            .thenThrow(new IllegalStateException("Keycloak unavailable"));
+
+    assertThrows(IllegalStateException.class,
+            () -> invitationService.createInvitation(request, authentication));
+
+    verify(invitationRepository, times(1)).save(any(Invitation.class));
+    verify(keycloakUserService, never()).sendInvitationActionsEmail(any());
   }
 
   @Test
@@ -93,15 +168,15 @@ class InvitationServiceTest {
     when(bethelRepository.getReferenceById(10L)).thenReturn(buildBethel(10L));
     when(invitationRepository.existsByEmailIgnoreCase("new@example.com")).thenReturn(false);
     when(invitationRepository.save(any(Invitation.class)))
-        .thenAnswer(invocation -> invocation.getArgument(0));
+            .thenAnswer(invocation -> invocation.getArgument(0));
     when(keycloakUserService.provisionUser("new@example.com", null, null)).thenReturn("kc-456");
     doThrow(new IllegalStateException("Keycloak unavailable")).when(keycloakUserService)
-        .sendInvitationActionsEmail("kc-456");
+            .sendInvitationActionsEmail("kc-456");
 
     TransactionSynchronizationManager.initSynchronization();
     try {
       assertThrows(IllegalStateException.class,
-          () -> invitationService.createInvitation(request, authentication));
+              () -> invitationService.createInvitation(request, authentication));
       completeRollback();
     } finally {
       TransactionSynchronizationManager.clearSynchronization();
@@ -126,7 +201,7 @@ class InvitationServiceTest {
     TransactionSynchronizationManager.initSynchronization();
     try {
       assertThrows(IllegalStateException.class,
-          () -> invitationService.createInvitation(request, authentication));
+              () -> invitationService.createInvitation(request, authentication));
       completeRollback();
     } finally {
       TransactionSynchronizationManager.clearSynchronization();
@@ -143,19 +218,19 @@ class InvitationServiceTest {
     when(invitationRepository.existsByEmailIgnoreCase("dup@example.com")).thenReturn(true);
 
     assertThrows(DuplicateEmailException.class,
-        () -> invitationService.createInvitation(request, authentication));
+            () -> invitationService.createInvitation(request, authentication));
     verify(invitationRepository, never()).save(any());
     verify(keycloakUserService, never()).sendInvitationActionsEmail(any());
   }
 
   @Test
-  void createInvitationThrowsWhenBethelNotFound() {
+  void rejectsInvitationWhenBethelDoesNotExist() {
     CreateInvitationRequest request = new CreateInvitationRequest("new@example.com", 99L, Role.MEMBRO_ATIVO);
 
     when(bethelRepository.existsById(99L)).thenReturn(false);
 
     assertThrows(ResponseStatusException.class,
-        () -> invitationService.createInvitation(request, authentication));
+            () -> invitationService.createInvitation(request, authentication));
     verify(invitationRepository, never()).save(any());
     verify(keycloakUserService, never()).sendInvitationActionsEmail(any());
   }
@@ -168,7 +243,7 @@ class InvitationServiceTest {
     when(authorizationService.canManageBethel(eq(20L), eq(authentication))).thenReturn(false);
 
     assertThrows(AccessDeniedException.class,
-        () -> invitationService.createInvitation(request, authentication));
+            () -> invitationService.createInvitation(request, authentication));
     verify(invitationRepository, never()).save(any());
     verify(keycloakUserService, never()).sendInvitationActionsEmail(any());
   }
@@ -219,7 +294,7 @@ class InvitationServiceTest {
     when(invitationRepository.findById(99L)).thenReturn(Optional.empty());
 
     assertThrows(InvitationNotFoundException.class,
-        () -> invitationService.getInvitationById(99L, authentication));
+            () -> invitationService.getInvitationById(99L, authentication));
   }
 
   @Test
@@ -230,7 +305,7 @@ class InvitationServiceTest {
     when(authorizationService.canManageBethel(eq(20L), eq(authentication))).thenReturn(false);
 
     assertThrows(AccessDeniedException.class,
-        () -> invitationService.getInvitationById(1L, authentication));
+            () -> invitationService.getInvitationById(1L, authentication));
   }
 
   @Test
@@ -249,7 +324,7 @@ class InvitationServiceTest {
     when(invitationRepository.findById(99L)).thenReturn(Optional.empty());
 
     assertThrows(InvitationNotFoundException.class,
-        () -> invitationService.revokeInvitation(99L, authentication));
+            () -> invitationService.revokeInvitation(99L, authentication));
     verify(invitationRepository, never()).delete(any());
   }
 
@@ -261,18 +336,18 @@ class InvitationServiceTest {
     when(authorizationService.canManageBethel(eq(20L), eq(authentication))).thenReturn(false);
 
     assertThrows(AccessDeniedException.class,
-        () -> invitationService.revokeInvitation(1L, authentication));
+            () -> invitationService.revokeInvitation(1L, authentication));
     verify(invitationRepository, never()).delete(any());
   }
 
   private void completeRollback() {
     TransactionSynchronizationManager.getSynchronizations()
-        .forEach(synchronization -> synchronization
-            .afterCompletion(TransactionSynchronization.STATUS_ROLLED_BACK));
+            .forEach(synchronization -> synchronization
+                    .afterCompletion(TransactionSynchronization.STATUS_ROLLED_BACK));
   }
 
   private Invitation buildInvitation(Long id, String email, InvitationStatus status,
-      Long bethelId, Role role) {
+                                     Long bethelId, Role role) {
     Invitation invitation = new Invitation();
     invitation.setId(id);
     invitation.setEmail(email);
