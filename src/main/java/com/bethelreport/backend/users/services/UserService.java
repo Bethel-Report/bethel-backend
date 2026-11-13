@@ -2,8 +2,10 @@ package com.bethelreport.backend.users.services;
 
 import com.bethelreport.backend.exceptions.DuplicateEmailException;
 import com.bethelreport.backend.exceptions.UserNotFoundException;
+import com.bethelreport.backend.invitations.entities.Invitation;
 import com.bethelreport.backend.invitations.entities.InvitationStatus;
 import com.bethelreport.backend.invitations.repositories.InvitationRepository;
+import com.bethelreport.backend.keycloak.services.KeycloakUserService;
 import com.bethelreport.backend.permissions.entities.Permission;
 import com.bethelreport.backend.permissions.entities.Role;
 import com.bethelreport.backend.permissions.repositories.PermissionRepository;
@@ -19,12 +21,15 @@ import com.bethelreport.backend.users.entities.User;
 import com.bethelreport.backend.users.mappers.UserMapper;
 import com.bethelreport.backend.users.repositories.UserRepository;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Service
 public class UserService {
@@ -34,16 +39,19 @@ public class UserService {
   private final AuthorizationService authorizationService;
   private final InvitationRepository invitationRepository;
   private final PermissionRepository permissionRepository;
+  private final KeycloakUserService keycloakUserService;
 
   public UserService(UserRepository userRepository, UserMapper userMapper,
       PermissionService permissionService, AuthorizationService authorizationService,
-      InvitationRepository invitationRepository, PermissionRepository permissionRepository) {
+      InvitationRepository invitationRepository, PermissionRepository permissionRepository,
+      KeycloakUserService keycloakUserService) {
     this.userRepository = userRepository;
     this.userMapper = userMapper;
     this.permissionService = permissionService;
     this.authorizationService = authorizationService;
     this.invitationRepository = invitationRepository;
     this.permissionRepository = permissionRepository;
+    this.keycloakUserService = keycloakUserService;
   }
 
   @Transactional
@@ -52,14 +60,39 @@ public class UserService {
       throw new DuplicateEmailException(request.email());
     }
     User user = userMapper.toEntity(request);
-    invitationRepository.findByEmailIgnoreCaseAndStatus(request.email(), InvitationStatus.PENDING)
-        .ifPresent(invitation -> {
-          user.setKeycloakUserId(invitation.getKeycloakUserId());
-          invitation.setStatus(InvitationStatus.ACCEPTED);
-          invitationRepository.save(invitation);
-        });
+    Optional<Invitation> invitation = invitationRepository
+        .findByEmailIgnoreCaseAndStatus(request.email(), InvitationStatus.PENDING);
+    if (invitation.isPresent()) {
+      String identityId = invitation.get().getKeycloakUserId();
+      if (identityId == null || identityId.isBlank()) {
+        throw new IllegalStateException("O convite não possui identidade no Keycloak.");
+      }
+      user.setKeycloakUserId(identityId);
+      invitation.get().setStatus(InvitationStatus.ACCEPTED);
+      invitationRepository.save(invitation.get());
+    } else {
+      String identityId = keycloakUserService.provisionUser(request.email(), request.name(), null);
+      registerKeycloakCompensation(identityId);
+      user.setKeycloakUserId(identityId);
+    }
 
-    return userMapper.toResponse(userRepository.save(user));
+    User saved = userRepository.saveAndFlush(user);
+    keycloakUserService.sendInvitationActionsEmail(user.getKeycloakUserId());
+    return userMapper.toResponse(saved);
+  }
+
+  private void registerKeycloakCompensation(String identityId) {
+    if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+      return;
+    }
+    TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+      @Override
+      public void afterCompletion(int status) {
+        if (status == STATUS_ROLLED_BACK) {
+          keycloakUserService.deleteUser(identityId);
+        }
+      }
+    });
   }
 
   public List<UserResponse> listUsers(UserFilters filter) {
