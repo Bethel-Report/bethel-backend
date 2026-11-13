@@ -1,5 +1,6 @@
 package com.bethelreport.backend.users.mappers;
 
+import com.bethelreport.backend.users.dtos.CompleteAdmissionRequest;
 import com.bethelreport.backend.users.dtos.CreateUserRequest;
 import com.bethelreport.backend.users.dtos.UpdateUserRequest;
 import com.bethelreport.backend.users.dtos.UserResponse;
@@ -15,6 +16,12 @@ public interface UserMapper {
   @Mapping(target = "active", constant = "true")
   @Mapping(target = "keycloakUserId", ignore = true)
   User toEntity(CreateUserRequest request);
+
+  @Mapping(target = "id", ignore = true)
+  @Mapping(target = "active", constant = "true")
+  @Mapping(target = "keycloakUserId", ignore = true)
+  @Mapping(target = "email", ignore = true)
+  User complete(CompleteAdmissionRequest request);
 
   @Mapping(target = "id", ignore = true)
   @Mapping(target = "active", ignore = true)

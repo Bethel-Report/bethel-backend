@@ -61,7 +61,7 @@ class InvitationServiceTest {
 
   @Test
   void createsInvitationSuccessfully() {
-    CreateInvitationRequest request = new CreateInvitationRequest("new@example.com", 10L);
+    CreateInvitationRequest request = new CreateInvitationRequest("new@example.com", 10L, Role.MEMBRO_ATIVO);
 
     when(bethelRepository.existsById(10L)).thenReturn(true);
     when(bethelRepository.getReferenceById(10L)).thenReturn(buildBethel(10L));
@@ -88,7 +88,7 @@ class InvitationServiceTest {
 
   @Test
   void deletesProvisionedIdentityWhenEmailPublicationFails() {
-    CreateInvitationRequest request = new CreateInvitationRequest("new@example.com", 10L);
+    CreateInvitationRequest request = new CreateInvitationRequest("new@example.com", 10L, Role.MEMBRO_ATIVO);
     when(bethelRepository.existsById(10L)).thenReturn(true);
     when(bethelRepository.getReferenceById(10L)).thenReturn(buildBethel(10L));
     when(invitationRepository.existsByEmailIgnoreCase("new@example.com")).thenReturn(false);
@@ -111,7 +111,7 @@ class InvitationServiceTest {
 
   @Test
   void deletesProvisionedIdentityWhenInvitationPersistenceFails() {
-    CreateInvitationRequest request = new CreateInvitationRequest("new@example.com", 10L);
+    CreateInvitationRequest request = new CreateInvitationRequest("new@example.com", 10L, Role.MEMBRO_ATIVO);
     when(bethelRepository.existsById(10L)).thenReturn(true);
     when(bethelRepository.getReferenceById(10L)).thenReturn(buildBethel(10L));
     when(invitationRepository.existsByEmailIgnoreCase("new@example.com")).thenReturn(false);
@@ -137,7 +137,7 @@ class InvitationServiceTest {
 
   @Test
   void createInvitationThrowsOnDuplicateEmail() {
-    CreateInvitationRequest request = new CreateInvitationRequest("dup@example.com", 10L);
+    CreateInvitationRequest request = new CreateInvitationRequest("dup@example.com", 10L, Role.MEMBRO_ATIVO);
 
     when(bethelRepository.existsById(10L)).thenReturn(true);
     when(invitationRepository.existsByEmailIgnoreCase("dup@example.com")).thenReturn(true);
@@ -150,7 +150,7 @@ class InvitationServiceTest {
 
   @Test
   void createInvitationThrowsWhenBethelNotFound() {
-    CreateInvitationRequest request = new CreateInvitationRequest("new@example.com", 99L);
+    CreateInvitationRequest request = new CreateInvitationRequest("new@example.com", 99L, Role.MEMBRO_ATIVO);
 
     when(bethelRepository.existsById(99L)).thenReturn(false);
 
@@ -162,7 +162,7 @@ class InvitationServiceTest {
 
   @Test
   void createInvitationThrowsWhenUnauthorizedForBethel() {
-    CreateInvitationRequest request = new CreateInvitationRequest("new@example.com", 20L);
+    CreateInvitationRequest request = new CreateInvitationRequest("new@example.com", 20L, Role.MEMBRO_ATIVO);
 
     when(bethelRepository.existsById(20L)).thenReturn(true);
     when(authorizationService.canManageBethel(eq(20L), eq(authentication))).thenReturn(false);
@@ -175,7 +175,7 @@ class InvitationServiceTest {
 
   @Test
   void councilListsOnlyInvitationsFromAuthorizedBethel() {
-    Invitation invitation = buildInvitation(1L, "a@example.com", InvitationStatus.PENDING, 10L);
+    Invitation invitation = buildInvitation(1L, "a@example.com", InvitationStatus.PENDING, 10L, Role.MEMBRO_ATIVO);
 
     when(invitationRepository.findByBethelId(10L)).thenReturn(List.of(invitation));
 
@@ -190,7 +190,7 @@ class InvitationServiceTest {
   @Test
   void grandCouncilListsAllInvitations() {
     when(authorizationService.isGrandeConselho(authentication)).thenReturn(true);
-    Invitation invitation = buildInvitation(1L, "a@example.com", InvitationStatus.PENDING, 10L);
+    Invitation invitation = buildInvitation(1L, "a@example.com", InvitationStatus.PENDING, 10L, Role.MEMBRO_ATIVO);
 
     when(invitationRepository.findAll()).thenReturn(List.of(invitation));
 
@@ -203,7 +203,7 @@ class InvitationServiceTest {
 
   @Test
   void getsInvitationById() {
-    Invitation invitation = buildInvitation(1L, "a@example.com", InvitationStatus.PENDING, 10L);
+    Invitation invitation = buildInvitation(1L, "a@example.com", InvitationStatus.PENDING, 10L, Role.MEMBRO_ATIVO);
 
     when(invitationRepository.findById(1L)).thenReturn(Optional.of(invitation));
 
@@ -224,7 +224,7 @@ class InvitationServiceTest {
 
   @Test
   void getInvitationByIdThrowsWhenUnauthorizedForBethel() {
-    Invitation invitation = buildInvitation(1L, "a@example.com", InvitationStatus.PENDING, 20L);
+    Invitation invitation = buildInvitation(1L, "a@example.com", InvitationStatus.PENDING, 20L, Role.MEMBRO_ATIVO);
 
     when(invitationRepository.findById(1L)).thenReturn(Optional.of(invitation));
     when(authorizationService.canManageBethel(eq(20L), eq(authentication))).thenReturn(false);
@@ -235,7 +235,7 @@ class InvitationServiceTest {
 
   @Test
   void revokesInvitation() {
-    Invitation invitation = buildInvitation(1L, "a@example.com", InvitationStatus.PENDING, 10L);
+    Invitation invitation = buildInvitation(1L, "a@example.com", InvitationStatus.PENDING, 10L, Role.MEMBRO_ATIVO);
 
     when(invitationRepository.findById(1L)).thenReturn(Optional.of(invitation));
 
@@ -255,7 +255,7 @@ class InvitationServiceTest {
 
   @Test
   void revokeInvitationThrowsWhenUnauthorizedForBethel() {
-    Invitation invitation = buildInvitation(1L, "a@example.com", InvitationStatus.PENDING, 20L);
+    Invitation invitation = buildInvitation(1L, "a@example.com", InvitationStatus.PENDING, 20L, Role.MEMBRO_ATIVO);
 
     when(invitationRepository.findById(1L)).thenReturn(Optional.of(invitation));
     when(authorizationService.canManageBethel(eq(20L), eq(authentication))).thenReturn(false);
@@ -272,11 +272,12 @@ class InvitationServiceTest {
   }
 
   private Invitation buildInvitation(Long id, String email, InvitationStatus status,
-      Long bethelId) {
+      Long bethelId, Role role) {
     Invitation invitation = new Invitation();
     invitation.setId(id);
     invitation.setEmail(email);
     invitation.setStatus(status);
+    invitation.setRole(role);
     invitation.setBethel(buildBethel(bethelId));
     invitation.setCreatedAt(LocalDateTime.of(2026, 10, 31, 10, 0));
     return invitation;
