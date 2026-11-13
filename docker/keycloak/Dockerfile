@@ -11,3 +11,5 @@ COPY --from=spi-build /build/target/keycloak-email-rabbit-spi-1.0.0.jar \
 
 RUN /opt/keycloak/bin/kc.sh build \
     --spi-email-sender--provider=rabbit
+
+COPY docker/keycloak/bootstrap.sh /opt/keycloak/bootstrap.sh
