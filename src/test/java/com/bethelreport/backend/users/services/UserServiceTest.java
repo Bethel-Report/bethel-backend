@@ -55,7 +55,8 @@ class UserServiceTest {
   private final PermissionRepository permissionRepository = mock(PermissionRepository.class);
   private final KeycloakUserService keycloakUserService = mock(KeycloakUserService.class);
   private final UserService userService = new UserService(userRepository, userMapper,
-      permissionService, authorizationService, invitationRepository, permissionRepository, keycloakUserService);
+      permissionService, authorizationService, invitationRepository, permissionRepository,
+      keycloakUserService);
   private final Authentication authentication = authentication("council@example.com");
 
   @BeforeEach
@@ -145,15 +146,15 @@ class UserServiceTest {
         .thenReturn("new-identity");
     when(userRepository.saveAndFlush(any(User.class)))
         .thenAnswer(invocation -> invocation.getArgument(0));
-    Mockito.doThrow(new IllegalStateException("Email unavailable"))
-        .when(keycloakUserService).sendInvitationActionsEmail("new-identity");
+    Mockito.doThrow(new IllegalStateException("Email unavailable")).when(keycloakUserService)
+        .sendInvitationActionsEmail("new-identity");
 
     TransactionSynchronizationManager.initSynchronization();
     try {
       assertThrows(IllegalStateException.class, () -> userService.createUser(request));
       verify(userRepository).saveAndFlush(any(User.class));
-      for (TransactionSynchronization synchronization
-          : TransactionSynchronizationManager.getSynchronizations()) {
+      for (TransactionSynchronization synchronization : TransactionSynchronizationManager
+          .getSynchronizations()) {
         synchronization.afterCompletion(TransactionSynchronization.STATUS_ROLLED_BACK);
       }
       verify(keycloakUserService).deleteUser("new-identity");
@@ -183,8 +184,8 @@ class UserServiceTest {
     invitation.setKeycloakUserId("existing-identity");
     when(invitationRepository.findByEmailIgnoreCaseAndStatus(request.email(),
         InvitationStatus.PENDING)).thenReturn(Optional.of(invitation));
-    Mockito.doThrow(new IllegalStateException("Email unavailable"))
-        .when(keycloakUserService).sendInvitationActionsEmail("existing-identity");
+    Mockito.doThrow(new IllegalStateException("Email unavailable")).when(keycloakUserService)
+        .sendInvitationActionsEmail("existing-identity");
 
     TransactionSynchronizationManager.initSynchronization();
     try {

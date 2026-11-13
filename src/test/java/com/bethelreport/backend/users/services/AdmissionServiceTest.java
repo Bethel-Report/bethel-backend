@@ -37,8 +37,8 @@ class AdmissionServiceTest {
   @Test
   void completesAdmissionWithPersistedUserBeforeCreatingPermission() {
     String email = "invited@example.com";
-    Jwt token = Jwt.withTokenValue("test-token").header("alg", "none")
-        .subject("identity-id").claim("email", email).claim("email_verified", true).build();
+    Jwt token = Jwt.withTokenValue("test-token").header("alg", "none").subject("identity-id")
+        .claim("email", email).claim("email_verified", true).build();
     Invitation invitation = new Invitation();
     invitation.setKeycloakUserId("identity-id");
     invitation.setStatus(InvitationStatus.PENDING);
