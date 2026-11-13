@@ -8,6 +8,8 @@ import static org.mockito.Mockito.when;
 import com.bethelreport.backend.invitations.entities.InvitationStatus;
 import com.bethelreport.backend.invitations.repositories.InvitationRepository;
 import com.bethelreport.backend.users.entities.User;
+import com.bethelreport.backend.users.mappers.UserMapper;
+import com.bethelreport.backend.permissions.repositories.PermissionRepository;
 import com.bethelreport.backend.users.repositories.UserRepository;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -17,7 +19,8 @@ class AdmissionServiceTest {
   private final UserRepository userRepository = mock(UserRepository.class);
   private final InvitationRepository invitationRepository = mock(InvitationRepository.class);
   private final AdmissionService admissionService = new AdmissionService(userRepository,
-      invitationRepository);
+      invitationRepository, mock(UserService.class), mock(UserMapper.class),
+      mock(PermissionRepository.class));
 
   @Test
   void admitsActiveUserWithVerifiedEmail() {

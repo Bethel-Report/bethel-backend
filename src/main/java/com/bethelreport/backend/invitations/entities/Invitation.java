@@ -1,6 +1,7 @@
 package com.bethelreport.backend.invitations.entities;
 
 import com.bethelreport.backend.bethel.entities.Bethel;
+import com.bethelreport.backend.permissions.entities.Role;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -31,6 +32,13 @@ public class Invitation {
   @Enumerated(EnumType.STRING)
   @Column(nullable = false, length = 20)
   private InvitationStatus status;
+
+  @Column(name = "keycloak_user_id", unique = true)
+  private String keycloakUserId;
+
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false)
+  private Role role;
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "bethel_id", nullable = false)

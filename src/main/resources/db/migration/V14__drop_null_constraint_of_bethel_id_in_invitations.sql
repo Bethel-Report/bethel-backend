@@ -1,0 +1,2 @@
+ALTER TABLE invitations
+ALTER COLUMN bethel_id DROP NOT NULL;
