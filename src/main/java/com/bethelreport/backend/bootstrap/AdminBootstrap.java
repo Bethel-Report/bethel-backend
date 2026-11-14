@@ -1,5 +1,7 @@
 package com.bethelreport.backend.bootstrap;
 
+import com.bethelreport.backend.bethel.entities.Bethel;
+import com.bethelreport.backend.bethel.repositories.BethelRepository;
 import com.bethelreport.backend.keycloak.client.KeycloakAdminClient;
 import com.bethelreport.backend.keycloak.dtos.KeycloakUserResponse;
 import com.bethelreport.backend.permissions.entities.Permission;
@@ -23,13 +25,16 @@ public class AdminBootstrap implements ApplicationRunner {
   private final KeycloakAdminClient keycloak;
   private final UserRepository users;
   private final PermissionRepository permissions;
+  private final BethelRepository bethels;
   private final String email;
 
   public AdminBootstrap(KeycloakAdminClient keycloak, UserRepository users,
-      PermissionRepository permissions, @Value("${app.bootstrap.admin.email}") String email) {
+      PermissionRepository permissions, BethelRepository bethels,
+      @Value("${app.bootstrap.admin.email}") String email) {
     this.keycloak = keycloak;
     this.users = users;
     this.permissions = permissions;
+    this.bethels = bethels;
     this.email = email;
   }
 
@@ -48,6 +53,7 @@ public class AdminBootstrap implements ApplicationRunner {
           "O administrador está vinculado a outra identidade Keycloak.");
     }
     user.setKeycloakUserId(identityId);
+    createBaseBethelIfMissing();
     User saved = users.save(user);
     if (!permissions.existsByUserId(saved.getId())) {
       Permission permission = new Permission();
@@ -56,6 +62,22 @@ public class AdminBootstrap implements ApplicationRunner {
       permission.setActive(true);
       permissions.save(permission);
     }
+  }
+
+  private void createBaseBethelIfMissing() {
+    if (bethels.existsByNameIgnoreCase("Grande Conselho")) {
+      return;
+    }
+    Bethel bethel = new Bethel();
+    bethel.setNumber(
+        bethels.findTopByOrderByNumberDesc().map(existing -> existing.getNumber() + 1).orElse(1));
+    bethel.setName("Grande Conselho");
+    bethel.setCity("Não informado");
+    bethel.setAddress("Não informado");
+    bethel.setEmail(email);
+    bethel.setSponsoringLodge("Não informado");
+    bethel.setActive(true);
+    bethels.save(bethel);
   }
 
   private User newAdmin() {

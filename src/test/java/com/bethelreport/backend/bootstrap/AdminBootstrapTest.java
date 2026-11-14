@@ -9,6 +9,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.bethelreport.backend.bethel.entities.Bethel;
+import com.bethelreport.backend.bethel.repositories.BethelRepository;
 import com.bethelreport.backend.keycloak.client.KeycloakAdminClient;
 import com.bethelreport.backend.keycloak.dtos.KeycloakUserResponse;
 import com.bethelreport.backend.permissions.entities.Permission;
@@ -27,7 +29,9 @@ class AdminBootstrapTest {
   private final KeycloakAdminClient keycloak = mock(KeycloakAdminClient.class);
   private final UserRepository users = mock(UserRepository.class);
   private final PermissionRepository permissions = mock(PermissionRepository.class);
-  private final AdminBootstrap bootstrap = new AdminBootstrap(keycloak, users, permissions, EMAIL);
+  private final BethelRepository bethels = mock(BethelRepository.class);
+  private final AdminBootstrap bootstrap = new AdminBootstrap(keycloak, users, permissions, bethels,
+      EMAIL);
 
   @BeforeEach
   void setUp() {
@@ -46,6 +50,9 @@ class AdminBootstrapTest {
 
     bootstrap.run(null);
 
+    var bethelCaptor = ArgumentCaptor.forClass(Bethel.class);
+    verify(bethels).save(bethelCaptor.capture());
+    assertEquals(1, bethelCaptor.getValue().getNumber());
     var userCaptor = ArgumentCaptor.forClass(User.class);
     verify(users).save(userCaptor.capture());
     assertEquals(EMAIL, userCaptor.getValue().getEmail());
@@ -55,6 +62,32 @@ class AdminBootstrapTest {
     verify(permissions).save(permissionCaptor.capture());
     assertEquals(Role.GRANDE_CONSELHO, permissionCaptor.getValue().getRole());
     assertTrue(permissionCaptor.getValue().isActive());
+  }
+
+  @Test
+  void createsBaseBethelWithNextAvailableNumber() {
+    Bethel existing = new Bethel();
+    existing.setNumber(7);
+    when(bethels.findTopByOrderByNumberDesc()).thenReturn(Optional.of(existing));
+
+    bootstrap.run(null);
+
+    var captor = ArgumentCaptor.forClass(Bethel.class);
+    verify(bethels).save(captor.capture());
+    assertEquals(8, captor.getValue().getNumber());
+    assertEquals("Grande Conselho", captor.getValue().getName());
+    assertEquals(EMAIL, captor.getValue().getEmail());
+    assertTrue(captor.getValue().isActive());
+  }
+
+  @Test
+  void preservesExistingBaseBethel() {
+    when(bethels.existsByNameIgnoreCase("Grande Conselho")).thenReturn(true);
+
+    bootstrap.run(null);
+    bootstrap.run(null);
+
+    verify(bethels, never()).save(any());
   }
 
   @Test
@@ -83,6 +116,7 @@ class AdminBootstrapTest {
 
     assertThrows(IllegalStateException.class, () -> bootstrap.run(null));
 
+    verify(bethels, never()).save(any());
     verify(users, never()).save(any());
     verify(permissions, never()).save(any());
   }
@@ -93,6 +127,7 @@ class AdminBootstrapTest {
 
     assertThrows(IllegalStateException.class, () -> bootstrap.run(null));
 
+    verify(bethels, never()).save(any());
     verify(users, never()).save(any());
   }
 }
