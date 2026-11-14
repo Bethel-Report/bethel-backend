@@ -22,6 +22,8 @@ import org.springframework.transaction.annotation.Transactional;
 @ConditionalOnProperty(name = "app.bootstrap.admin.enabled", havingValue = "true")
 public class AdminBootstrap implements ApplicationRunner {
 
+  private static final String NOT_INFORMED = "Não informado";
+
   private final KeycloakAdminClient keycloak;
   private final UserRepository users;
   private final PermissionRepository permissions;
@@ -72,10 +74,10 @@ public class AdminBootstrap implements ApplicationRunner {
     bethel.setNumber(
         bethels.findTopByOrderByNumberDesc().map(existing -> existing.getNumber() + 1).orElse(1));
     bethel.setName("Grande Conselho");
-    bethel.setCity("Não informado");
-    bethel.setAddress("Não informado");
+    bethel.setCity(NOT_INFORMED);
+    bethel.setAddress(NOT_INFORMED);
     bethel.setEmail(email);
-    bethel.setSponsoringLodge("Não informado");
+    bethel.setSponsoringLodge(NOT_INFORMED);
     bethel.setActive(true);
     bethels.save(bethel);
   }
@@ -85,8 +87,8 @@ public class AdminBootstrap implements ApplicationRunner {
     user.setEmail(email);
     user.setName("Administrador do Grande Conselho");
     user.setBirthday(LocalDate.of(2000, 1, 1));
-    user.setCity("Não informado");
-    user.setAddress("Não informado");
+    user.setCity(NOT_INFORMED);
+    user.setAddress(NOT_INFORMED);
     user.setActive(true);
     return user;
   }
