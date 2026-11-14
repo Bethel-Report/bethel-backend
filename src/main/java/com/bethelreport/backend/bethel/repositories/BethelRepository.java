@@ -11,6 +11,8 @@ import org.springframework.data.repository.query.Param;
 public interface BethelRepository extends JpaRepository<Bethel, Long> {
   Optional<Bethel> findByNumber(Integer number);
 
+  Optional<Bethel> findTopByOrderByNumberDesc();
+
   boolean existsByNumber(Integer number);
 
   List<Bethel> findByNameContainingIgnoreCase(String name);
