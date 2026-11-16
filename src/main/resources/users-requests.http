@@ -1,0 +1,98 @@
+# Gerenciamento de usuários — executar cada requisição separadamente.
+# Use um access token Keycloak de GRANDE_CONSELHO ou CONSELHO_DE_BETHEL.
+# Conselho de Bethel só lista/detalha/edita usuários vinculados ao próprio Bethel.
+# Substitua userId pelo ID retornado na criação ou na listagem.
+# Não salve tokens reais no repositório.
+
+@baseUrl = http://localhost:8080/api
+@token = Bearer eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJhTktNeDRUdkh1XzJWVkU5bW9FRTJpX1lhX19CeXhtaVY0UDZOSDB6ZExnIn0.eyJleHAiOjE3OTQ1OTk5MzEsImlhdCI6MTc5NDU5OTYzMSwiYXV0aF90aW1lIjoxNzk0NTk4MTMxLCJqdGkiOiJvbnJ0cnQ6Y2E0OTZjN2UtZDdjOS05MDQzLTI2ODMtMDE3N2NlOWU0YjMyIiwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDo4MDgxL3JlYWxtcy9iZXRoZWwtcmVwb3J0IiwiYXVkIjoiYWNjb3VudCIsInN1YiI6Ijg1YWVjNmJlLTg3YTctNDEyNS1hZjRjLTc0ZWQ5NTQxMWNlYiIsInR5cCI6IkJlYXJlciIsImF6cCI6ImJldGhlbC1yZXBvcnQtZnJvbnRlbmQiLCJzaWQiOiI4ZjVkNDMwOC03MmM2LTQ2MWItODgzYy01ZjZmZmFlNWZiN2YiLCJhY3IiOiIxIiwiYWxsb3dlZC1vcmlnaW5zIjpbImh0dHA6Ly9sb2NhbGhvc3Q6MzAwMCJdLCJyZWFsbV9hY2Nlc3MiOnsicm9sZXMiOlsiZGVmYXVsdC1yb2xlcy1iZXRoZWwtcmVwb3J0Iiwib2ZmbGluZV9hY2Nlc3MiLCJ1bWFfYXV0aG9yaXphdGlvbiJdfSwicmVzb3VyY2VfYWNjZXNzIjp7ImFjY291bnQiOnsicm9sZXMiOlsibWFuYWdlLWFjY291bnQiLCJtYW5hZ2UtYWNjb3VudC1saW5rcyIsInZpZXctcHJvZmlsZSJdfX0sInNjb3BlIjoib3BlbmlkIHByb2ZpbGUgZW1haWwiLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwibmFtZSI6IkFkbWluaXN0cmFkb3IgZG8gR3JhbmRlIENvbnNlbGhvIiwicHJlZmVycmVkX3VzZXJuYW1lIjoiYWRtaW5AYmV0aGVscmVwb3J0LmxvY2FsIiwiZ2l2ZW5fbmFtZSI6IkFkbWluaXN0cmFkb3IiLCJmYW1pbHlfbmFtZSI6ImRvIEdyYW5kZSBDb25zZWxobyIsImVtYWlsIjoiYWRtaW5AYmV0aGVscmVwb3J0LmxvY2FsIn0.mjezQ6ZvUz7Bn6fN0QkwZVDttEco-1SDJroOqLTtixj2-PL09HuqICehC6c_RHXyNy6vFKZ-IxNTCGfdOBuOWKxUmHk0deYADekKlfJ-DZylkDEJn-0qKA0WRyCS6fIqIo0GkSNiEqw2tvg5OB9V0cXr8Oa4PBUGEwFmUDHcicSCE-sQfoCye9VyR28xAVQYSy1cbPvL7HmITi3dUqCoYobS5mXP1k8mLhba7paifZHgnh1LbFmdmAWXIvsXmLe_-hDvtm8L-f3KXuUCZbJICG09j16KrW-2tWnfwHhNMgLHSi0ef8arMxHi8bkyhlJeoHHCzlxWhlD7wBot6V1kJA
+@userId = 2
+@email = lucasnbs.dev@gmail.com
+@bethelId = 1
+@status = true
+@profile = GRANDE_CONSELHO
+
+### Convidar usuário — 201
+# Fluxo de cadastro por convite: cria a identidade no Keycloak e envia o e-mail.
+# Use e-mail sem convite ou identidade Keycloak existente; duplicidade retorna 409.
+# Conselho de Bethel pode convidar membros somente para o próprio Bethel.
+# Após configurar a conta, o convidado conclui /admission/complete com seu próprio token.
+POST {{baseUrl}}/invitations
+Authorization: {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "{{email}}",
+  "role": "{{profile}}",
+  "bethelId": {{bethelId}}
+}
+
+### Criar usuário — 201
+# Cria cadastro ativo e identidade Keycloak, solicitando e-mail de verificação/definição de senha.
+# A permissão deve ser atribuída separadamente. Reutiliza identidade de convite pendente.
+# Use um e-mail ainda não cadastrado; duplicidade retorna 409.
+POST {{baseUrl}}/users
+Authorization: {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "{{email}}",
+  "name": "Usuário de teste",
+  "birthday": "2000-05-20",
+  "city": "Fortaleza",
+  "address": "Rua de exemplo, 100",
+  "volunteer": false,
+  "masonicRelationship": false,
+  "member": true,
+  "sponsorship": false
+}
+
+### Listar usuários — 200, array sem paginação
+GET {{baseUrl}}/users
+Authorization: {{token}}
+Accept: application/json
+
+### Listar por e-mail — busca parcial sem diferenciar maiúsculas/minúsculas
+GET {{baseUrl}}/users?email={{email}}
+Authorization: {{token}}
+Accept: application/json
+
+### Listar com filtros combinados
+# status filtra a atividade do usuário; profile filtra a role associada.
+# Omita os parâmetros que não quiser filtrar.
+# Conselho de Bethel tem bethelId substituído pelo próprio vínculo no servidor.
+GET {{baseUrl}}/users?email={{email}}&bethelId={{bethelId}}&status={{status}}&profile={{profile}}
+Authorization: {{token}}
+Accept: application/json
+
+### Detalhar usuário pelo ID — 200; inexistente: 404; sem acesso: 403
+GET {{baseUrl}}/users/{{userId}}
+Authorization: {{token}}
+Accept: application/json
+
+### Editar usuário — 200
+# PUT exige todos os campos editáveis. Não recebe active, role ou bethelId.
+# Preserve o e-mail: alterá-lo aqui não sincroniza a identidade no Keycloak.
+PUT {{baseUrl}}/users/{{userId}}
+Authorization: {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "{{email}}",
+  "name": "Usuário de teste atualizado",
+  "birthday": "2000-05-20",
+  "city": "Fortaleza",
+  "address": "Rua de exemplo, 200",
+  "volunteer": true,
+  "masonicRelationship": false,
+  "member": true,
+  "sponsorship": false
+}
+
+### Consultar usuário autenticado — 200, inclui resumo de permission
+GET {{baseUrl}}/users/me
+Authorization: {{token}}
+Accept: application/json
