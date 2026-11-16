@@ -177,6 +177,54 @@ O projeto inclui um workflow do GitHub Actions (`.github/workflows/ci.yml`) que 
 4. Executa `./mvnw verify` (compilação + testes + Spotless + Checkstyle + PMD)
 
 
+## SPI de email do Keycloak (`keycloak-spi`)
+
+O módulo `keycloak-spi/` implementa um `EmailSenderProvider` próprio para encaminhar
+e-mails do Keycloak ao RabbitMQ. O Keycloak continua renderizando seus templates e
+gerando links de ação; o SPI publica o destinatário, o assunto e os corpos já renderizados.
+O Worker consome a mensagem e envia o conteúdo por SMTP, sem recriar
+links ou templates.
+
+O fluxo é: **Backend solicita as ações ao Keycloak → Keycloak renderiza o email →
+`keycloak-spi` publica em `email.exchange` com a chave `email.send` → message-broker
+entrega em `email.queue` → Worker envia por SMTP**. O projeto `message-broker` é
+dono da topologia e do contrato descrito em
+`../message-broker/contracts/email-message.schema.json`; o SPI e o Backend são
+produtores, e o Worker é consumidor.
+
+O payload usa os campos `recipientEmail`, `subject`, `textBody` e `htmlBody`. Os
+corpos podem ser nulos, desde que ao menos um contenha conteúdo. A publicação usa
+mensagem persistente, roteamento obrigatório e publisher confirms. O SPI não deve
+registrar corpos, tokens de ação ou links sensíveis em logs.
+
+### Build e ativação
+
+O serviço `keycloak` do `docker-compose.yaml` constrói a imagem a partir da raiz do
+Backend. O estágio Maven empacota `keycloak-spi/` e a imagem instala o JAR em
+`/opt/keycloak/providers/`; durante o build do Keycloak, o provedor `rabbit` é
+selecionado. Para reconstruir e iniciar o serviço:
+
+```bash
+docker compose up -d --build keycloak
+```
+
+### Configuração
+
+O serviço Keycloak recebe as configurações do RabbitMQ por variáveis de ambiente
+carregadas do arquivo `.env` do Backend:
+
+| Variável | Uso |
+|---|---|
+| `RABBITMQ_HOST` / `RABBITMQ_PORT` | Endereço do broker (`rabbitmq:5672` na rede Docker compartilhada) |
+| `RABBITMQ_USERNAME` / `RABBITMQ_PASSWORD` | Credenciais do broker; mantenha os valores secretos no `.env` local |
+| `RABBITMQ_VHOST` | Virtual host (padrão `/`) |
+| `RABBITMQ_EMAIL_EXCHANGE` | Exchange (padrão `email.exchange`) |
+| `RABBITMQ_EMAIL_ROUTING_KEY` | Routing key (padrão `email.send`) |
+
+Inicie primeiro o projeto `message-broker` para criar a rede `net1` e disponibilizar
+o broker. Configure também o remetente e as demais opções de email no realm do
+Keycloak; as credenciais SMTP ficam no Worker, que realiza o envio final.
+
 ## BE-08 — Responsáveis administrativos dos Bethéis
 
 O responsável administrativo é um usuário com permissão ativa de perfil

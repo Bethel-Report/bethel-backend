@@ -8,7 +8,7 @@ import org.testcontainers.rabbitmq.RabbitMQContainer;
 import org.testcontainers.utility.DockerImageName;
 
 @TestConfiguration(proxyBeanMethods = false)
-public class TestcontainersConfiguration {
+class TestcontainersConfiguration {
 
   @Bean
   @ServiceConnection

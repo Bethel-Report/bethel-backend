@@ -13,6 +13,7 @@ public interface InvitationMapper {
   @Mapping(target = "status", ignore = true)
   @Mapping(target = "createdAt", ignore = true)
   @Mapping(target = "bethel", ignore = true)
+  @Mapping(target = "keycloakUserId", ignore = true)
   Invitation toEntity(CreateInvitationRequest request);
 
   @Mapping(target = "bethelId", source = "bethel.id")
