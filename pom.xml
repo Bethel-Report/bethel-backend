@@ -296,4 +296,53 @@
         </plugins>
     </build>
 
+    <profiles>
+        <profile>
+            <id>mutation</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.pitest</groupId>
+                        <artifactId>pitest-maven</artifactId>
+                        <version>1.22.0</version>
+                        <dependencies>
+                            <dependency>
+                                <groupId>org.pitest</groupId>
+                                <artifactId>pitest-junit5-plugin</artifactId>
+                                <version>1.2.3</version>
+                            </dependency>
+                        </dependencies>
+                        <configuration>
+                            <targetClasses>
+                                <param>com.bethelreport.backend.bethel.*</param>
+                                <param>com.bethelreport.backend.forms.*</param>
+                                <param>com.bethelreport.backend.invitations.*</param>
+                                <param>com.bethelreport.backend.message.*</param>
+                                <param>com.bethelreport.backend.permissions.*</param>
+                                <param>com.bethelreport.backend.publications.*</param>
+                                <param>com.bethelreport.backend.storage.*</param>
+                                <param>com.bethelreport.backend.transactions.*</param>
+                                <param>com.bethelreport.backend.users.*</param>
+                            </targetClasses>
+                            <excludedClasses>
+                                <param>com.bethelreport.backend.*MapperImpl*</param>
+                            </excludedClasses>
+                            <targetTests>
+                                <param>com.bethelreport.backend.*Test</param>
+                            </targetTests>
+                            <excludedTestClasses>
+                                <param>com.bethelreport.backend.*RepositoryTest</param>
+                                <param>com.bethelreport.backend.*IntegrationTest</param>
+                            </excludedTestClasses>
+                            <outputFormats>
+                                <param>HTML</param>
+                                <param>XML</param>
+                            </outputFormats>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
 </project>

@@ -68,6 +68,24 @@ O comando `yarn install` executa automaticamente o script `prepare`, que configu
 ./mvnw test
 ```
 
+### Testes de mutação
+
+Execute na raiz do back-end com Java 21. No PowerShell, use:
+
+```powershell
+.\mvnw.cmd -Pmutation test-compile org.pitest:pitest-maven:mutationCoverage
+```
+
+No Linux ou macOS, use:
+
+```bash
+./mvnw -Pmutation test-compile org.pitest:pitest-maven:mutationCoverage
+```
+
+O perfil executa a análise local com o PIT. O CI segue o fluxo de validação
+usual. Os relatórios locais são gerados em `target/pit-reports/`, com o resumo
+em `index.html` e os resultados por mutante em `mutations.xml`.
+
 ## Conventional Commits
 
 As mensagens de commit seguem o padrão [Conventional Commits](https://www.conventionalcommits.org/), validado automaticamente pelo Husky + Commitlint a cada `git commit`.
