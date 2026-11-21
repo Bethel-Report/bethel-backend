@@ -1,0 +1,3 @@
+ALTER TABLE users
+    ADD COLUMN deleted_at TIMESTAMP NULL,
+    ADD COLUMN anonymized_at TIMESTAMP NULL;
