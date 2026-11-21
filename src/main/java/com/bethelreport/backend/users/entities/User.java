@@ -9,6 +9,7 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -46,5 +47,8 @@ public class User {
   private boolean masonicRelationship;
   private boolean member;
   private boolean sponsorship;
+
+  private LocalDateTime deletedAt;
+  private LocalDateTime anonymizedAt;
 
 }

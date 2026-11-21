@@ -20,6 +20,8 @@ import com.bethelreport.backend.users.dtos.UserResponse;
 import com.bethelreport.backend.users.entities.User;
 import com.bethelreport.backend.users.mappers.UserMapper;
 import com.bethelreport.backend.users.repositories.UserRepository;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.security.access.AccessDeniedException;
@@ -177,6 +179,54 @@ public class UserService {
         user.isMasonicRelationship(), user.isMember(), user.isSponsorship(), permissionInfo);
   }
 
+  @Transactional
+  public void deleteOwnAccount(Authentication authentication) {
+    if (!(authentication instanceof JwtAuthenticationToken jwtAuthentication)) {
+      throw new AccessDeniedException("Autenticação inválida.");
+    }
+
+    String email = jwtAuthentication.getToken().getClaimAsString("email");
+    if (email == null || email.isBlank()) {
+      throw new AccessDeniedException("O token não possui email.");
+    }
+
+    User user = userRepository.findByEmailIgnoreCase(email)
+        .orElseThrow(() -> new UserNotFoundException(email));
+    if (user.getDeletedAt() != null) {
+      return;
+    }
+
+    final String identityId = user.getKeycloakUserId();
+    String anonymizedEmail = "deleted+" + user.getId() + "@deleted.invalid";
+
+    userRepository.save(anonymizeUser(user, anonymizedEmail));
+
+    permissionService.deactivateByUserId(user.getId());
+
+    invitationRepository.findByEmailIgnoreCase(email).ifPresent(invitation -> {
+      invitation.setEmail(anonymizedEmail);
+      invitation.setKeycloakUserId(null);
+      invitationRepository.save(invitation);
+    });
+
+    if (identityId != null && !identityId.isBlank()) {
+      deleteKeycloakIdentityAfterCommit(identityId);
+    }
+  }
+
+  private void deleteKeycloakIdentityAfterCommit(String identityId) {
+    if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+      keycloakUserService.deleteUser(identityId);
+      return;
+    }
+    TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+      @Override
+      public void afterCommit() {
+        keycloakUserService.deleteUser(identityId);
+      }
+    });
+  }
+
   private User getAuthorizedUser(Long userId, Authentication authentication) {
     User user = userRepository.findById(userId)
         .orElseThrow(() -> new UserNotFoundException(userId));
@@ -184,6 +234,25 @@ public class UserService {
     if (!authorizationService.canManageUsers(authentication, userId)) {
       throw new AccessDeniedException("Você não pode administrar este usuário.");
     }
+
+    return user;
+  }
+
+  private User anonymizeUser(User user, String anonymizedEmail) {
+    user.setActive(false);
+    LocalDateTime deletionTime = LocalDateTime.now();
+    user.setDeletedAt(deletionTime);
+    user.setAnonymizedAt(deletionTime);
+    user.setEmail(anonymizedEmail);
+    user.setKeycloakUserId(null);
+    user.setName("Conta excluída");
+    user.setBirthday(LocalDate.of(1900, 1, 1));
+    user.setCity("Dados removidos");
+    user.setAddress("Dados removidos");
+    user.setVolunteer(false);
+    user.setMasonicRelationship(false);
+    user.setMember(false);
+    user.setSponsorship(false);
 
     return user;
   }
