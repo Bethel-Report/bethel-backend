@@ -15,17 +15,23 @@ public interface UserMapper {
   @Mapping(target = "id", ignore = true)
   @Mapping(target = "active", constant = "true")
   @Mapping(target = "keycloakUserId", ignore = true)
+  @Mapping(target = "deletedAt", ignore = true)
+  @Mapping(target = "anonymizedAt", ignore = true)
   User toEntity(CreateUserRequest request);
 
   @Mapping(target = "id", ignore = true)
   @Mapping(target = "active", constant = "true")
   @Mapping(target = "keycloakUserId", ignore = true)
   @Mapping(target = "email", ignore = true)
+  @Mapping(target = "deletedAt", ignore = true)
+  @Mapping(target = "anonymizedAt", ignore = true)
   User complete(CompleteAdmissionRequest request);
 
   @Mapping(target = "id", ignore = true)
   @Mapping(target = "active", ignore = true)
   @Mapping(target = "keycloakUserId", ignore = true)
+  @Mapping(target = "deletedAt", ignore = true)
+  @Mapping(target = "anonymizedAt", ignore = true)
   void updateEntity(UpdateUserRequest request, @MappingTarget User user);
 
   UserResponse toResponse(User user);
