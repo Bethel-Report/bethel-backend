@@ -1,6 +1,7 @@
 package com.bethelreport.backend;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.bethelreport.backend.bethel.entities.Bethel;
@@ -15,7 +16,12 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +38,14 @@ class UserRepositoryTest {
 
   @Autowired
   private PermissionRepository permissionRepository;
+
+  @Autowired
+  private JdbcTemplate jdbcTemplate;
+
+  @BeforeEach
+  void seedAuditSystemActor() {
+    AuditTestFixtures.ensureSystemActor(userRepository);
+  }
 
   @Test
   @Transactional
@@ -59,6 +73,45 @@ class UserRepositoryTest {
             .map(User::getId).collect(Collectors.toSet()));
     assertTrue(userRepository.searchUsers(null, null, null, null).stream().map(User::getId).toList()
         .contains(withoutPermission.getId()));
+  }
+
+  @Test
+  @Transactional
+  void auditCapturesInsertUpdateDeleteAndRetainsDeletedRows() {
+    Long systemActorId = userRepository.findByEmailIgnoreCase("admin@bethelreport.local")
+        .orElseThrow().getId();
+    assertEquals(1,
+        jdbcTemplate.queryForObject(
+            "SELECT count(*) FROM audit_log WHERE table_name = 'users' "
+                + "AND record_id = ? AND operation = 'INSERT' AND actor_id = ? AND is_system",
+            Integer.class, systemActorId, systemActorId));
+
+    Jwt jwt = Jwt.withTokenValue("audit-test-token").header("alg", "none")
+        .claim("email", "admin@bethelreport.local").build();
+    SecurityContextHolder.getContext().setAuthentication(new JwtAuthenticationToken(jwt));
+    try {
+      User auditedUser = userRepository
+          .saveAndFlush(createUser("Audited user", UUID.randomUUID().toString(), true));
+      Long auditedUserId = auditedUser.getId();
+      auditedUser.setName("Updated audited user");
+      userRepository.saveAndFlush(auditedUser);
+      userRepository.delete(auditedUser);
+      userRepository.flush();
+
+      assertFalse(userRepository.existsById(auditedUserId));
+      assertEquals(3,
+          jdbcTemplate.queryForObject(
+              "SELECT count(*) FROM audit_log WHERE table_name = 'users' AND record_id = ? "
+                  + "AND actor_id = ? AND NOT is_system",
+              Integer.class, auditedUserId, systemActorId));
+      assertEquals("Updated audited user",
+          jdbcTemplate.queryForObject(
+              "SELECT old_values ->> 'name' FROM audit_log WHERE table_name = 'users' "
+                  + "AND record_id = ? AND operation = 'DELETE'",
+              String.class, auditedUserId));
+    } finally {
+      SecurityContextHolder.clearContext();
+    }
   }
 
   private void createPermission(User user, Bethel bethel, Role role) {

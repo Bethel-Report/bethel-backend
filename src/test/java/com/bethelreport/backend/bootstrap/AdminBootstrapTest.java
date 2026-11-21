@@ -37,7 +37,7 @@ class AdminBootstrapTest {
   void setUp() {
     when(keycloak.findUsersByEmail(EMAIL))
         .thenReturn(List.of(new KeycloakUserResponse("identity-id", EMAIL, EMAIL, true, true)));
-    when(users.save(any(User.class))).thenAnswer(invocation -> {
+    when(users.saveAndFlush(any(User.class))).thenAnswer(invocation -> {
       User user = invocation.getArgument(0);
       user.setId(1L);
       return user;
@@ -54,7 +54,7 @@ class AdminBootstrapTest {
     verify(bethels).save(bethelCaptor.capture());
     assertEquals(1, bethelCaptor.getValue().getNumber());
     var userCaptor = ArgumentCaptor.forClass(User.class);
-    verify(users).save(userCaptor.capture());
+    verify(users).saveAndFlush(userCaptor.capture());
     assertEquals(EMAIL, userCaptor.getValue().getEmail());
     assertEquals("identity-id", userCaptor.getValue().getKeycloakUserId());
     assertTrue(userCaptor.getValue().isActive());
@@ -117,7 +117,7 @@ class AdminBootstrapTest {
     assertThrows(IllegalStateException.class, () -> bootstrap.run(null));
 
     verify(bethels, never()).save(any());
-    verify(users, never()).save(any());
+    verify(users, never()).saveAndFlush(any());
     verify(permissions, never()).save(any());
   }
 
