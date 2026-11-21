@@ -2,6 +2,8 @@ package com.bethelreport.backend.users.services;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -58,6 +60,7 @@ class UserServiceTest {
       permissionService, authorizationService, invitationRepository, permissionRepository,
       keycloakUserService);
   private final Authentication authentication = authentication("council@example.com");
+  private final Authentication authenticationOwner = authentication("owner@example.com");
 
   @BeforeEach
   void setUp() {
@@ -336,6 +339,68 @@ class UserServiceTest {
 
     assertFalse(response.active());
     Mockito.verify(permissionService).deactivateByUserId(1L);
+  }
+
+  @Test
+  void deletesAndAnonymizesOwnAccountAndRevokesRelatedAccess() {
+    User user = buildUser(7L, "owner@example.com", true);
+    user.setKeycloakUserId("identity-7");
+    Invitation acceptedInvitation = new Invitation();
+    acceptedInvitation.setEmail("owner@example.com");
+    acceptedInvitation.setKeycloakUserId("identity-7");
+    acceptedInvitation.setStatus(InvitationStatus.ACCEPTED);
+    when(userRepository.findByEmailIgnoreCase("owner@example.com")).thenReturn(Optional.of(user));
+    when(invitationRepository.findByEmailIgnoreCase("owner@example.com"))
+        .thenReturn(Optional.of(acceptedInvitation));
+
+    userService.deleteOwnAccount(authenticationOwner);
+
+    assertFalse(user.isActive());
+    assertEquals("deleted+7@deleted.invalid", user.getEmail());
+    assertEquals("Conta excluída", user.getName());
+    assertNull(user.getKeycloakUserId());
+    assertNotNull(user.getDeletedAt());
+    assertNotNull(user.getAnonymizedAt());
+    assertEquals("deleted+7@deleted.invalid", acceptedInvitation.getEmail());
+    assertNull(acceptedInvitation.getKeycloakUserId());
+    verify(userRepository).save(user);
+    verify(invitationRepository).save(acceptedInvitation);
+    verify(permissionService).deactivateByUserId(7L);
+    verify(keycloakUserService).deleteUser("identity-7");
+  }
+
+  @Test
+  void schedulesKeycloakDeletionOnlyAfterDatabaseCommit() {
+    User user = buildUser(8L, "owner@example.com", true);
+    user.setKeycloakUserId("identity-8");
+    when(userRepository.findByEmailIgnoreCase("owner@example.com")).thenReturn(Optional.of(user));
+    TransactionSynchronizationManager.initSynchronization();
+    try {
+      userService.deleteOwnAccount(authenticationOwner);
+
+      verify(keycloakUserService, never()).deleteUser(any());
+      TransactionSynchronizationManager.getSynchronizations()
+          .forEach(TransactionSynchronization::afterCommit);
+      verify(keycloakUserService).deleteUser("identity-8");
+    } finally {
+      TransactionSynchronizationManager.clearSynchronization();
+    }
+  }
+
+  @Test
+  void rejectsOwnAccountDeletionWithoutJwtAuthentication() {
+    assertThrows(AccessDeniedException.class,
+        () -> userService.deleteOwnAccount(mock(Authentication.class)));
+    verify(userRepository, never()).findByEmailIgnoreCase(any());
+  }
+
+  @Test
+  void throwsWhenOwnAccountDoesNotExist() {
+    when(userRepository.findByEmailIgnoreCase("council@example.com")).thenReturn(Optional.empty());
+
+    assertThrows(UserNotFoundException.class, () -> userService.deleteOwnAccount(authentication));
+    verify(permissionService, never()).deactivateByUserId(any());
+    verify(keycloakUserService, never()).deleteUser(any());
   }
 
   @Test
