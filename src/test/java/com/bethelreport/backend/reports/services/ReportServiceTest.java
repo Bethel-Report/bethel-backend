@@ -27,6 +27,7 @@ import com.bethelreport.backend.reports.entities.ReportStatus;
 import com.bethelreport.backend.reports.mappers.ReportMapper;
 import com.bethelreport.backend.reports.repositories.ReportRepository;
 import jakarta.persistence.EntityNotFoundException;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -288,6 +289,126 @@ class ReportServiceTest {
     assertEquals(1, result.answers().size());
   }
 
+  @Test
+  void rejectsReopenWithPastDeadline() {
+    Report report = draftReport();
+    report.setStatus(ReportStatus.SUBMITTED);
+    when(reportRepository.findById(1L)).thenReturn(Optional.of(report));
+
+    assertThrows(IllegalArgumentException.class,
+        () -> service.reopen(1L, new ReopenReportRequest(LocalDateTime.now().minusDays(1))));
+  }
+
+  @Test
+  void rejectsNonNumericAnswerForNumberField() {
+    Report report = draftReport();
+    when(reportRepository.findByIdWithAnswers(1L)).thenReturn(Optional.of(report));
+    when(authorizationService.canManageBethel(10L, authentication)).thenReturn(true);
+
+    SaveAnswersRequest request = new SaveAnswersRequest(
+        List.of(new ReportAnswerRequest(1L, "abc")));
+    assertThrows(IllegalArgumentException.class,
+        () -> service.saveAnswers(1L, request, authentication));
+  }
+
+  @Test
+  void rejectsInvalidDateAnswer() {
+    Report report = draftReport();
+    addField(report.getForm(), 2L, "Data do evento", FormFieldType.DATE, false);
+    when(reportRepository.findByIdWithAnswers(1L)).thenReturn(Optional.of(report));
+    when(authorizationService.canManageBethel(10L, authentication)).thenReturn(true);
+
+    SaveAnswersRequest request = new SaveAnswersRequest(
+        List.of(new ReportAnswerRequest(2L, "data-invalida")));
+    assertThrows(IllegalArgumentException.class,
+        () -> service.saveAnswers(1L, request, authentication));
+  }
+
+  @Test
+  void rejectsInvalidBooleanAnswer() {
+    Report report = draftReport();
+    addField(report.getForm(), 2L, "Ativo", FormFieldType.BOOLEAN, false);
+    when(reportRepository.findByIdWithAnswers(1L)).thenReturn(Optional.of(report));
+    when(authorizationService.canManageBethel(10L, authentication)).thenReturn(true);
+
+    SaveAnswersRequest request = new SaveAnswersRequest(
+        List.of(new ReportAnswerRequest(2L, "talvez")));
+    assertThrows(IllegalArgumentException.class,
+        () -> service.saveAnswers(1L, request, authentication));
+  }
+
+  @Test
+  void rejectsInvalidSelectAnswer() {
+    Report report = draftReport();
+    FormField selectField = new FormField();
+    selectField.setId(2L);
+    selectField.setForm(report.getForm());
+    selectField.setLabel("Categoria");
+    selectField.setType(FormFieldType.SELECT);
+    selectField.setRequired(false);
+    selectField.setDisplayOrder(2);
+    selectField.setOptions(new ArrayList<>(List.of("A", "B", "C")));
+    report.getForm().getFields().add(selectField);
+
+    when(reportRepository.findByIdWithAnswers(1L)).thenReturn(Optional.of(report));
+    when(authorizationService.canManageBethel(10L, authentication)).thenReturn(true);
+
+    SaveAnswersRequest request = new SaveAnswersRequest(List.of(new ReportAnswerRequest(2L, "D")));
+    assertThrows(IllegalArgumentException.class,
+        () -> service.saveAnswers(1L, request, authentication));
+  }
+
+  @Test
+  void rejectsCreateWhenFormNotYetOpen() {
+    when(authorizationService.getAuthorizedBethelId(authentication)).thenReturn(10L);
+    Form form = publishedForm();
+    form.setOpeningDate(LocalDate.now().plusDays(10));
+    when(formRepository.findById(1L)).thenReturn(Optional.of(form));
+
+    assertThrows(IllegalStateException.class,
+        () -> service.create(new CreateReportRequest(1L), authentication));
+  }
+
+  @Test
+  void rejectsCreateWhenFormAlreadyClosed() {
+    when(authorizationService.getAuthorizedBethelId(authentication)).thenReturn(10L);
+    Form form = publishedForm();
+    form.setClosingDate(LocalDate.now().minusDays(1));
+    when(formRepository.findById(1L)).thenReturn(Optional.of(form));
+
+    assertThrows(IllegalStateException.class,
+        () -> service.create(new CreateReportRequest(1L), authentication));
+  }
+
+  @Test
+  void rejectsSaveAnswersWhenFormAlreadyClosed() {
+    Report report = draftReport();
+    report.getForm().setClosingDate(LocalDate.now().minusDays(1));
+    when(reportRepository.findByIdWithAnswers(1L)).thenReturn(Optional.of(report));
+    when(authorizationService.canManageBethel(10L, authentication)).thenReturn(true);
+
+    SaveAnswersRequest request = new SaveAnswersRequest(List.of(new ReportAnswerRequest(1L, "42")));
+    assertThrows(IllegalStateException.class,
+        () -> service.saveAnswers(1L, request, authentication));
+  }
+
+  @Test
+  void rejectsSubmitWhenFormAlreadyClosed() {
+    Report report = draftReport();
+    report.getForm().setClosingDate(LocalDate.now().minusDays(1));
+    ReportAnswer answer = new ReportAnswer();
+    answer.setId(1L);
+    answer.setReport(report);
+    answer.setField(report.getForm().getFields().get(0));
+    answer.setValue("42");
+    report.getAnswers().add(answer);
+
+    when(reportRepository.findByIdWithAnswers(1L)).thenReturn(Optional.of(report));
+    when(authorizationService.canManageBethel(10L, authentication)).thenReturn(true);
+
+    assertThrows(IllegalStateException.class, () -> service.submit(1L, authentication));
+  }
+
   private Bethel bethel() {
     Bethel bethel = new Bethel();
     bethel.setId(10L);
@@ -306,6 +427,8 @@ class ReportServiceTest {
     form.setName("Relatório Anual 2026");
     form.setStatus(FormStatus.PUBLISHED);
     form.setReferenceYear(2026);
+    form.setOpeningDate(LocalDate.now().minusDays(30));
+    form.setClosingDate(LocalDate.now().plusDays(30));
     addField(form, 1L, "Reuniões realizadas", FormFieldType.NUMBER, true);
     return form;
   }
