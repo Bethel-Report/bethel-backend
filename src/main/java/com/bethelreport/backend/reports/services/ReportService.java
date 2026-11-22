@@ -98,7 +98,15 @@ public class ReportService {
     Report report = findWithAnswers(id);
     checkOwnership(report, authentication);
     requireEditable(report);
-    ReportValidation.requireFormOpen(report.getForm());
+    if (report.getStatus() != ReportStatus.REOPENED) {
+      ReportValidation.requireFormOpen(report.getForm());
+    }
+
+    Set<Long> uniqueFieldIds = request.answers().stream().map(ReportAnswerRequest::fieldId)
+        .collect(Collectors.toSet());
+    if (uniqueFieldIds.size() != request.answers().size()) {
+      throw new IllegalArgumentException("A requisição contém campos duplicados.");
+    }
 
     Map<Long, FormField> fieldMap = report.getForm().getFields().stream()
         .collect(Collectors.toMap(FormField::getId, Function.identity()));
@@ -133,7 +141,9 @@ public class ReportService {
     Report report = findWithAnswers(id);
     checkOwnership(report, authentication);
     requireEditable(report);
-    ReportValidation.requireFormOpen(report.getForm());
+    if (report.getStatus() != ReportStatus.REOPENED) {
+      ReportValidation.requireFormOpen(report.getForm());
+    }
 
     Set<Long> answeredFieldIds = report.getAnswers().stream()
         .filter(a -> a.getValue() != null && !a.getValue().isBlank()).map(a -> a.getField().getId())
