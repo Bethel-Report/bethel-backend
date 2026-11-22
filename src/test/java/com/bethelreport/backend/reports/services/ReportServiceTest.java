@@ -393,6 +393,79 @@ class ReportServiceTest {
   }
 
   @Test
+  void rejectsDuplicateFieldIdsInRequest() {
+    Report report = draftReport();
+    when(reportRepository.findByIdWithAnswers(1L)).thenReturn(Optional.of(report));
+    when(authorizationService.canManageBethel(10L, authentication)).thenReturn(true);
+
+    SaveAnswersRequest request = new SaveAnswersRequest(
+        List.of(new ReportAnswerRequest(1L, "10"), new ReportAnswerRequest(1L, "20")));
+    assertThrows(IllegalArgumentException.class,
+        () -> service.saveAnswers(1L, request, authentication));
+  }
+
+  @Test
+  void rejectsCreateWhenFormManuallyClosed() {
+    when(authorizationService.getAuthorizedBethelId(authentication)).thenReturn(10L);
+    Form form = publishedForm();
+    form.setStatus(FormStatus.CLOSED);
+    when(formRepository.findById(1L)).thenReturn(Optional.of(form));
+
+    assertThrows(IllegalStateException.class,
+        () -> service.create(new CreateReportRequest(1L), authentication));
+  }
+
+  @Test
+  void rejectsSaveAnswersWhenFormManuallyClosed() {
+    Report report = draftReport();
+    report.getForm().setStatus(FormStatus.CLOSED);
+    when(reportRepository.findByIdWithAnswers(1L)).thenReturn(Optional.of(report));
+    when(authorizationService.canManageBethel(10L, authentication)).thenReturn(true);
+
+    SaveAnswersRequest request = new SaveAnswersRequest(List.of(new ReportAnswerRequest(1L, "42")));
+    assertThrows(IllegalStateException.class,
+        () -> service.saveAnswers(1L, request, authentication));
+  }
+
+  @Test
+  void allowsSaveAnswersForReopenedReportAfterFormClosed() {
+    Report report = draftReport();
+    report.setStatus(ReportStatus.REOPENED);
+    report.setReopenDeadline(LocalDateTime.now().plusDays(7));
+    report.getForm().setClosingDate(LocalDate.now().minusDays(1));
+    when(reportRepository.findByIdWithAnswers(1L)).thenReturn(Optional.of(report));
+    when(authorizationService.canManageBethel(10L, authentication)).thenReturn(true);
+    saveReturnsArgument();
+
+    SaveAnswersRequest request = new SaveAnswersRequest(List.of(new ReportAnswerRequest(1L, "42")));
+    ReportResponse result = service.saveAnswers(1L, request, authentication);
+
+    assertEquals(1, result.answers().size());
+  }
+
+  @Test
+  void allowsSubmitForReopenedReportAfterFormClosed() {
+    Report report = draftReport();
+    report.setStatus(ReportStatus.REOPENED);
+    report.setReopenDeadline(LocalDateTime.now().plusDays(7));
+    report.getForm().setClosingDate(LocalDate.now().minusDays(1));
+    ReportAnswer answer = new ReportAnswer();
+    answer.setId(1L);
+    answer.setReport(report);
+    answer.setField(report.getForm().getFields().get(0));
+    answer.setValue("42");
+    report.getAnswers().add(answer);
+
+    when(reportRepository.findByIdWithAnswers(1L)).thenReturn(Optional.of(report));
+    when(authorizationService.canManageBethel(10L, authentication)).thenReturn(true);
+    saveReturnsArgument();
+
+    ReportResponse result = service.submit(1L, authentication);
+
+    assertEquals(ReportStatus.SUBMITTED, result.status());
+  }
+
+  @Test
   void rejectsSubmitWhenFormAlreadyClosed() {
     Report report = draftReport();
     report.getForm().setClosingDate(LocalDate.now().minusDays(1));
