@@ -73,6 +73,7 @@ public class ReportService {
     if (form.getStatus() != FormStatus.PUBLISHED) {
       throw new IllegalStateException("Somente formulários publicados podem receber relatórios.");
     }
+    ReportValidation.requireFormOpen(form);
 
     reportRepository.findByBethelIdAndFormId(bethelId, form.getId()).ifPresent(existing -> {
       throw new IllegalStateException("Relatório já existe para este Bethel e formulário.");
@@ -97,6 +98,7 @@ public class ReportService {
     Report report = findWithAnswers(id);
     checkOwnership(report, authentication);
     requireEditable(report);
+    ReportValidation.requireFormOpen(report.getForm());
 
     Map<Long, FormField> fieldMap = report.getForm().getFields().stream()
         .collect(Collectors.toMap(FormField::getId, Function.identity()));
@@ -110,6 +112,8 @@ public class ReportService {
         throw new IllegalArgumentException(
             "Campo " + answerReq.fieldId() + " não pertence ao formulário.");
       }
+
+      ReportValidation.validateAnswerValue(field, answerReq.value());
 
       ReportAnswer answer = existingAnswers.get(answerReq.fieldId());
       if (answer == null) {
@@ -129,6 +133,7 @@ public class ReportService {
     Report report = findWithAnswers(id);
     checkOwnership(report, authentication);
     requireEditable(report);
+    ReportValidation.requireFormOpen(report.getForm());
 
     Set<Long> answeredFieldIds = report.getAnswers().stream()
         .filter(a -> a.getValue() != null && !a.getValue().isBlank()).map(a -> a.getField().getId())
@@ -151,6 +156,9 @@ public class ReportService {
     Report report = findOrThrow(id);
     if (report.getStatus() != ReportStatus.SUBMITTED) {
       throw new IllegalStateException("Somente relatórios submetidos podem ser reabertos.");
+    }
+    if (!request.reopenDeadline().isAfter(LocalDateTime.now())) {
+      throw new IllegalArgumentException("O prazo para reenvio deve ser uma data futura.");
     }
 
     report.setStatus(ReportStatus.REOPENED);
