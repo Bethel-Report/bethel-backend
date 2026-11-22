@@ -1,4 +1,4 @@
-package com.bethelreport.backend.reports.entities;
+package com.bethelreport.backend.reportgeneration.entities;
 
 import com.bethelreport.backend.bethel.entities.Bethel;
 import com.bethelreport.backend.users.entities.User;
@@ -20,11 +20,11 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "report_requests")
+@Table(name = "report_generation_requests")
 @Getter
 @Setter
 @NoArgsConstructor
-public class ReportRequest {
+public class GenerationRequest {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -39,12 +39,12 @@ public class ReportRequest {
   private User requester;
 
   @Enumerated(EnumType.STRING)
-  @Column(nullable = false, length = 20)
-  private ReportType type;
+  @Column(name = "type", nullable = false, length = 20)
+  private com.bethelreport.backend.reportgeneration.entities.GenerationType generationType;
 
   @Enumerated(EnumType.STRING)
   @Column(nullable = false, length = 20)
-  private ReportStatus status;
+  private GenerationStatus status;
 
   @Column(nullable = false)
   private LocalDate periodStart;

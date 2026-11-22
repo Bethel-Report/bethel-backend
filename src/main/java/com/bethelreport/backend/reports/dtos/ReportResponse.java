@@ -1,11 +1,11 @@
 package com.bethelreport.backend.reports.dtos;
 
 import com.bethelreport.backend.reports.entities.ReportStatus;
-import com.bethelreport.backend.reports.entities.ReportType;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
-public record ReportResponse(Long id, Long bethelId, Long requesterId, ReportType type,
-    ReportStatus status, LocalDate periodStart, LocalDate periodEnd, String failureReason,
-    LocalDateTime createdAt, LocalDateTime updatedAt) {
+public record ReportResponse(Long id, Long bethelId, String bethelName, Long formId,
+    String formName, ReportStatus status, LocalDateTime submittedAt, LocalDateTime reopenedAt,
+    LocalDateTime reopenDeadline, List<ReportAnswerResponse> answers, LocalDateTime createdAt,
+    LocalDateTime updatedAt) {
 }

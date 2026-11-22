@@ -2,243 +2,182 @@ package com.bethelreport.backend.reports.controllers;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.bethelreport.backend.bethel.entities.Bethel;
-import com.bethelreport.backend.bethel.repositories.BethelRepository;
 import com.bethelreport.backend.permissions.entities.Permission;
 import com.bethelreport.backend.permissions.entities.Role;
 import com.bethelreport.backend.permissions.repositories.PermissionRepository;
 import com.bethelreport.backend.permissions.services.AuthorizationService;
-import com.bethelreport.backend.reports.entities.ReportRequest;
+import com.bethelreport.backend.reports.dtos.ReportAnswerResponse;
+import com.bethelreport.backend.reports.dtos.ReportResponse;
 import com.bethelreport.backend.reports.entities.ReportStatus;
-import com.bethelreport.backend.reports.entities.ReportType;
-import com.bethelreport.backend.reports.mappers.ReportMapperImpl;
-import com.bethelreport.backend.reports.message.publishers.ReportPublisher;
-import com.bethelreport.backend.reports.repositories.ReportRequestRepository;
 import com.bethelreport.backend.reports.services.ReportService;
 import com.bethelreport.backend.security.config.SecurityConfig;
-import com.bethelreport.backend.storage.MinioStorage;
-import com.bethelreport.backend.users.entities.User;
-import com.bethelreport.backend.users.repositories.UserRepository;
 import com.bethelreport.backend.users.services.AdmissionService;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 @WebMvcTest(ReportController.class)
-@Import({SecurityConfig.class, AuthorizationService.class, ReportService.class,
-    ReportMapperImpl.class})
+@Import({SecurityConfig.class, AuthorizationService.class})
 class ReportControllerTest {
-
-  private static final String URL = "/api/bethels/10/reports";
-  private static final String BODY = """
-      {"type":"FINANCEIRO","periodStart":"2026-01-01","periodEnd":"2026-06-30"}
-      """;
-
   @Autowired
   private MockMvc mvc;
   @MockitoBean
-  private ReportRequestRepository repository;
+  private ReportService reportService;
   @MockitoBean
-  private BethelRepository bethels;
+  private AdmissionService admissionService;
   @MockitoBean
-  private UserRepository users;
+  private JwtDecoder jwtDecoder;
   @MockitoBean
-  private PermissionRepository permissions;
-  @MockitoBean
-  private AdmissionService admission;
-  @MockitoBean
-  private JwtDecoder decoder;
-  @MockitoBean
-  private ReportPublisher publisher;
-  @MockitoBean
-  private MinioStorage storage;
-
-  private Bethel bethel;
-  private User user;
-  private ReportRequest entity;
+  private PermissionRepository permissionRepository;
+  private static final String BASE = "/api/reports";
 
   @BeforeEach
-  void setUp() {
-    when(admission.admittedUser(any())).thenReturn(true);
-    bethel = new Bethel();
-    bethel.setId(10L);
-    user = new User();
-    user.setId(7L);
-    Permission permission = new Permission();
-    permission.setActive(true);
-    permission.setRole(Role.CONSELHO_DE_BETHEL);
-    permission.setBethel(bethel);
-    when(permissions.findByUserEmail("council@test.com")).thenReturn(Optional.of(permission));
-    when(bethels.findById(10L)).thenReturn(Optional.of(bethel));
-    when(bethels.existsById(10L)).thenReturn(true);
-    when(users.findByEmailIgnoreCase("council@test.com")).thenReturn(Optional.of(user));
-
-    entity = new ReportRequest();
-    entity.setId(1L);
-    entity.setBethel(bethel);
-    entity.setRequester(user);
-    entity.setType(ReportType.FINANCEIRO);
-    entity.setStatus(ReportStatus.PENDING);
-    entity.setPeriodStart(LocalDate.of(2026, 1, 1));
-    entity.setPeriodEnd(LocalDate.of(2026, 6, 30));
-    entity.setCreatedAt(LocalDateTime.of(2026, 11, 1, 12, 0));
-    entity.setUpdatedAt(entity.getCreatedAt());
-    when(repository.findByIdAndBethelId(1L, 10L)).thenReturn(Optional.of(entity));
-    when(repository.save(any())).thenAnswer(invocation -> {
-      ReportRequest saved = invocation.getArgument(0);
-      saved.setId(1L);
-      return saved;
-    });
-  }
-
-  private MockHttpServletRequestBuilder asCouncil(MockHttpServletRequestBuilder request) {
-    return request.with(jwt().jwt(token -> token.claim("email", "council@test.com")));
+  void setUpAuthorization() {
+    when(permissionRepository.findByUserEmail("gc@example.com"))
+        .thenReturn(Optional.of(permission(Role.GRANDE_CONSELHO, null)));
+    when(permissionRepository.findByUserEmail("council@example.com"))
+        .thenReturn(Optional.of(permission(Role.CONSELHO_DE_BETHEL, 10L)));
+    when(permissionRepository.findByUserEmail("member@example.com"))
+        .thenReturn(Optional.of(permission(Role.MEMBRO_ATIVO, 10L)));
   }
 
   @Test
-  void createsReportRequestAndPublishesToQueue() throws Exception {
-    mvc.perform(asCouncil(post(URL)).contentType(MediaType.APPLICATION_JSON).content(BODY))
+  void createsReportWith201() throws Exception {
+    when(reportService.create(any(), any())).thenReturn(reportResponse());
+    mvc.perform(post(BASE).with(admittedJwt("council@example.com"))
+        .contentType(MediaType.APPLICATION_JSON).content("{\"formId\":1}"))
         .andExpect(status().isCreated()).andExpect(jsonPath("$.id").value(1))
-        .andExpect(jsonPath("$.bethelId").value(10)).andExpect(jsonPath("$.requesterId").value(7))
-        .andExpect(jsonPath("$.type").value("FINANCEIRO"))
-        .andExpect(jsonPath("$.status").value("PENDING"))
-        .andExpect(jsonPath("$.periodStart").value("2026-01-01"))
-        .andExpect(jsonPath("$.periodEnd").value("2026-06-30"));
-    verify(publisher).publish(any());
+        .andExpect(jsonPath("$.status").value("DRAFT"));
+    verify(reportService).create(any(), any());
   }
 
   @Test
-  void getsReportStatus() throws Exception {
-    mvc.perform(asCouncil(get(URL + "/1"))).andExpect(status().isOk())
-        .andExpect(jsonPath("$.id").value(1)).andExpect(jsonPath("$.status").value("PENDING"));
+  void listsReports() throws Exception {
+    when(reportService.findAll(any())).thenReturn(List.of(reportResponse()));
+    mvc.perform(get(BASE).with(admittedJwt("gc@example.com"))).andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].bethelName").value("Bethel 1"));
   }
 
   @Test
-  void listsReportsWithPagination() throws Exception {
-    when(repository.findByBethelId(eq(10L), any(Pageable.class)))
-        .thenReturn(new PageImpl<>(List.of(entity)));
-    mvc.perform(asCouncil(get(URL))).andExpect(status().isOk())
-        .andExpect(jsonPath("$.content[0].id").value(1))
-        .andExpect(jsonPath("$.totalElements").value(1));
+  void getsReportById() throws Exception {
+    when(reportService.findById(eq(1L), any())).thenReturn(reportResponse());
+    mvc.perform(get(BASE + "/1").with(admittedJwt("council@example.com")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.answers[0].fieldLabel").value("Reuniões realizadas"));
   }
 
   @Test
-  void downloadsCompletedReport() throws Exception {
-    entity.setStatus(ReportStatus.COMPLETED);
-    entity.setStorageKey("reports/10/1.pdf");
-    when(storage.download("reports/10/1.pdf")).thenReturn("pdf-content".getBytes());
-    mvc.perform(asCouncil(get(URL + "/1/download"))).andExpect(status().isOk())
-        .andExpect(header().string("Content-Disposition", "attachment; filename=\"report-1.pdf\""))
-        .andExpect(content().contentType(MediaType.APPLICATION_PDF));
+  void savesAnswers() throws Exception {
+    when(reportService.saveAnswers(eq(1L), any(), any())).thenReturn(reportResponse());
+    mvc.perform(put(BASE + "/1/answers").with(admittedJwt("council@example.com"))
+        .contentType(MediaType.APPLICATION_JSON)
+        .content("{\"answers\":[{\"fieldId\":1,\"value\":\"42\"}]}")).andExpect(status().isOk());
+    verify(reportService).saveAnswers(eq(1L), any(), any());
   }
 
   @Test
-  void rejectsDownloadOfPendingReport() throws Exception {
-    mvc.perform(asCouncil(get(URL + "/1/download"))).andExpect(status().isConflict());
-    verifyNoInteractions(storage);
+  void submitsReport() throws Exception {
+    ReportResponse submitted = new ReportResponse(1L, 10L, "Bethel 1", 1L, "Relatório Anual 2026",
+        ReportStatus.SUBMITTED, LocalDateTime.now(), null, null, List.of(), LocalDateTime.now(),
+        LocalDateTime.now());
+    when(reportService.submit(eq(1L), any())).thenReturn(submitted);
+    mvc.perform(patch(BASE + "/1/submit").with(admittedJwt("council@example.com")))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("SUBMITTED"));
   }
 
   @Test
-  void rejectsInvalidPeriod() throws Exception {
-    String body = """
-        {"type":"FINANCEIRO","periodStart":"2026-06-30","periodEnd":"2026-01-01"}
-        """;
-    mvc.perform(asCouncil(post(URL)).contentType(MediaType.APPLICATION_JSON).content(body))
+  void reopensReportWithGrandeConselho() throws Exception {
+    ReportResponse reopened = new ReportResponse(1L, 10L, "Bethel 1", 1L, "Relatório Anual 2026",
+        ReportStatus.REOPENED, null, LocalDateTime.now(), LocalDateTime.now().plusDays(7),
+        List.of(), LocalDateTime.now(), LocalDateTime.now());
+    when(reportService.reopen(eq(1L), any())).thenReturn(reopened);
+    mvc.perform(patch(BASE + "/1/reopen").with(admittedJwt("gc@example.com"))
+        .contentType(MediaType.APPLICATION_JSON)
+        .content("{\"reopenDeadline\":\"2026-12-31T23:59:59\"}")).andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("REOPENED"));
+  }
+
+  @Test
+  void conselhoCannotReopenReport() throws Exception {
+    mvc.perform(patch(BASE + "/1/reopen").with(admittedJwt("council@example.com"))
+        .contentType(MediaType.APPLICATION_JSON)
+        .content("{\"reopenDeadline\":\"2026-12-31T23:59:59\"}")).andExpect(status().isForbidden());
+    verifyNoInteractions(reportService);
+  }
+
+  @Test
+  void memberCannotReopenReport() throws Exception {
+    mvc.perform(patch(BASE + "/1/reopen").with(admittedJwt("member@example.com"))
+        .contentType(MediaType.APPLICATION_JSON)
+        .content("{\"reopenDeadline\":\"2026-12-31T23:59:59\"}")).andExpect(status().isForbidden());
+    verifyNoInteractions(reportService);
+  }
+
+  @Test
+  void unauthenticatedCannotAccessReports() throws Exception {
+    mvc.perform(get(BASE)).andExpect(status().isUnauthorized());
+    verifyNoInteractions(reportService);
+  }
+
+  @Test
+  void rejectsInvalidCreateRequest() throws Exception {
+    mvc.perform(post(BASE).with(admittedJwt("council@example.com"))
+        .contentType(MediaType.APPLICATION_JSON).content("{\"formId\":null}"))
         .andExpect(status().isBadRequest());
-    verify(repository, never()).save(any());
+    verifyNoInteractions(reportService);
   }
 
-  @ParameterizedTest
-  @ValueSource(strings = {"{}", "{\"type\":\"INVALID\"}"})
-  void rejectsMissingOrMalformedFields(String body) throws Exception {
-    mvc.perform(asCouncil(post(URL)).contentType(MediaType.APPLICATION_JSON).content(body))
+  @Test
+  void rejectsInvalidSaveAnswersRequest() throws Exception {
+    mvc.perform(put(BASE + "/1/answers").with(admittedJwt("council@example.com"))
+        .contentType(MediaType.APPLICATION_JSON).content("{\"answers\":[]}"))
         .andExpect(status().isBadRequest());
-    verifyNoInteractions(repository);
+    verifyNoInteractions(reportService);
   }
 
-  @ParameterizedTest
-  @ValueSource(strings = {"page=-1", "size=0", "size=101"})
-  void rejectsInvalidPagination(String query) throws Exception {
-    mvc.perform(asCouncil(get(URL + "?" + query))).andExpect(status().isBadRequest());
-    verifyNoInteractions(repository);
-  }
-
-  @Test
-  void doesNotFindReportFromAnotherBethel() throws Exception {
-    mvc.perform(asCouncil(get(URL + "/2"))).andExpect(status().isNotFound());
-  }
-
-  @ParameterizedTest
-  @ValueSource(strings = {"outsider", "member", "inactive", "missing"})
-  void deniesOperationsWithoutActiveAdministrativeLink(String actor) throws Exception {
+  private Permission permission(Role role, Long bethelId) {
     Permission permission = new Permission();
-    permission.setActive(!"inactive".equals(actor));
-    permission.setRole("member".equals(actor) ? Role.MEMBRO_ATIVO : Role.CONSELHO_DE_BETHEL);
-    Bethel actorBethel = new Bethel();
-    actorBethel.setId("outsider".equals(actor) ? 20L : 10L);
-    permission.setBethel(actorBethel);
-    when(permissions.findByUserEmail("actor@test.com"))
-        .thenReturn("missing".equals(actor) ? Optional.empty() : Optional.of(permission));
-    for (MockHttpServletRequestBuilder request : List.of(get(URL), get(URL + "/1"), post(URL))) {
-      mvc.perform(request.with(jwt().jwt(token -> token.claim("email", "actor@test.com")))
-          .contentType(MediaType.APPLICATION_JSON).content(BODY)).andExpect(status().isForbidden());
+    permission.setRole(role);
+    if (bethelId != null) {
+      Bethel bethel = new Bethel();
+      bethel.setId(bethelId);
+      permission.setBethel(bethel);
     }
-    verifyNoInteractions(repository, bethels, users);
+    return permission;
   }
 
-  @Test
-  void grandeConselhoCanAccessOtherBethel() throws Exception {
-    Permission permission = new Permission();
-    permission.setActive(true);
-    permission.setRole(Role.GRANDE_CONSELHO);
-    when(permissions.findByUserEmail("council@test.com")).thenReturn(Optional.of(permission));
-    mvc.perform(asCouncil(get(URL + "/1"))).andExpect(status().isOk());
-    mvc.perform(asCouncil(post(URL)).contentType(MediaType.APPLICATION_JSON).content(BODY))
-        .andExpect(status().isCreated());
+  private RequestPostProcessor admittedJwt(String email) {
+    when(admissionService.admittedUser(any(Jwt.class))).thenReturn(true);
+    return jwt().jwt(token -> token.claim("email", email));
   }
 
-  @Test
-  void missingBethelReturnsNotFound() throws Exception {
-    when(bethels.findById(10L)).thenReturn(Optional.empty());
-    when(bethels.existsById(10L)).thenReturn(false);
-    mvc.perform(asCouncil(post(URL)).contentType(MediaType.APPLICATION_JSON).content(BODY))
-        .andExpect(status().isNotFound());
-    mvc.perform(asCouncil(get(URL))).andExpect(status().isNotFound());
-  }
-
-  @Test
-  void anonymousRequestsAreUnauthorized() throws Exception {
-    for (MockHttpServletRequestBuilder request : List.of(get(URL), get(URL + "/1"), post(URL))) {
-      mvc.perform(request.contentType(MediaType.APPLICATION_JSON).content(BODY))
-          .andExpect(status().isUnauthorized());
-    }
-    verifyNoInteractions(repository);
+  private ReportResponse reportResponse() {
+    ReportAnswerResponse answer = new ReportAnswerResponse(1L, 1L, "Reuniões realizadas",
+        com.bethelreport.backend.forms.entities.FormFieldType.NUMBER, "42", LocalDateTime.now());
+    return new ReportResponse(1L, 10L, "Bethel 1", 1L, "Relatório Anual 2026", ReportStatus.DRAFT,
+        null, null, null, List.of(answer), LocalDateTime.now(), LocalDateTime.now());
   }
 }

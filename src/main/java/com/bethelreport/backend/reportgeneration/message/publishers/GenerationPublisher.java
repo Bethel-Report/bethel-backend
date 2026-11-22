@@ -1,6 +1,6 @@
-package com.bethelreport.backend.reports.message.publishers;
+package com.bethelreport.backend.reportgeneration.message.publishers;
 
-import com.bethelreport.backend.reports.message.dtos.ReportMessage;
+import com.bethelreport.backend.reportgeneration.message.dtos.GenerationMessage;
 import java.util.UUID;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
@@ -11,7 +11,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 @Component
-public class ReportPublisher {
+public class GenerationPublisher {
 
   private static final long CONFIRM_TIMEOUT_SECONDS = 5;
 
@@ -19,7 +19,7 @@ public class ReportPublisher {
   private final String exchange;
   private final String routingKey;
 
-  public ReportPublisher(RabbitTemplate rabbitTemplate,
+  public GenerationPublisher(RabbitTemplate rabbitTemplate,
       @Value("${app.messaging.report.exchange}") String exchange,
       @Value("${app.messaging.report.routing-key}") String routingKey) {
     this.rabbitTemplate = rabbitTemplate;
@@ -27,7 +27,7 @@ public class ReportPublisher {
     this.routingKey = routingKey;
   }
 
-  public void publish(ReportMessage message) {
+  public void publish(GenerationMessage message) {
     CorrelationData correlation = new CorrelationData(UUID.randomUUID().toString());
     rabbitTemplate.convertAndSend(exchange, routingKey, message, correlation);
     waitForConfirm(correlation);

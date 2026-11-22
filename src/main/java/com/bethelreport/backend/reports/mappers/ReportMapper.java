@@ -1,28 +1,25 @@
 package com.bethelreport.backend.reports.mappers;
 
-import com.bethelreport.backend.reports.dtos.ReportPage;
+import com.bethelreport.backend.reports.dtos.ReportAnswerResponse;
 import com.bethelreport.backend.reports.dtos.ReportResponse;
-import com.bethelreport.backend.reports.entities.ReportRequest;
+import com.bethelreport.backend.reports.entities.Report;
+import com.bethelreport.backend.reports.entities.ReportAnswer;
 import java.util.List;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-import org.mapstruct.ReportingPolicy;
-import org.springframework.data.domain.Page;
 
-@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.ERROR)
+@Mapper(componentModel = "spring")
 public interface ReportMapper {
+  @Mapping(source = "bethel.id", target = "bethelId")
+  @Mapping(source = "bethel.name", target = "bethelName")
+  @Mapping(source = "form.id", target = "formId")
+  @Mapping(source = "form.name", target = "formName")
+  ReportResponse toResponse(Report report);
 
-  @Mapping(target = "bethelId", source = "bethel.id")
-  @Mapping(target = "requesterId", source = "requester.id")
-  ReportResponse toResponse(ReportRequest entity);
+  @Mapping(source = "field.id", target = "fieldId")
+  @Mapping(source = "field.label", target = "fieldLabel")
+  @Mapping(source = "field.type", target = "fieldType")
+  ReportAnswerResponse toAnswerResponse(ReportAnswer answer);
 
-  List<ReportResponse> toList(List<ReportRequest> entities);
-
-  ReportPage toPage(List<ReportResponse> content, int number, int size, long totalElements,
-      int totalPages);
-
-  default ReportPage toPage(Page<ReportRequest> page) {
-    return toPage(toList(page.getContent()), page.getNumber(), page.getSize(),
-        page.getTotalElements(), page.getTotalPages());
-  }
+  List<ReportResponse> toResponseList(List<Report> reports);
 }
