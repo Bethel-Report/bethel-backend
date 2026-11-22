@@ -114,7 +114,10 @@ public class PermissionService {
 
   @Transactional
   public void deactivateByUserId(Long userId) {
-    permissionRepository.findByUserId(userId).ifPresent(this::deactivatePermission);
+    Permission permission = permissionRepository.findByUserId(userId)
+        .orElseThrow(() -> new EntityNotFoundException("Permissão não encontrada"));
+    permission.setActive(false);
+    permissionRepository.save(permission);
   }
 
   @Transactional
