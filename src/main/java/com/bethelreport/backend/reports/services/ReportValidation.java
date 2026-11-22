@@ -2,6 +2,7 @@ package com.bethelreport.backend.reports.services;
 
 import com.bethelreport.backend.forms.entities.Form;
 import com.bethelreport.backend.forms.entities.FormField;
+import com.bethelreport.backend.forms.entities.FormStatus;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
@@ -13,6 +14,9 @@ final class ReportValidation {
   }
 
   static void requireFormOpen(Form form) {
+    if (form.getStatus() == FormStatus.CLOSED) {
+      throw new IllegalStateException("O formulário foi encerrado.");
+    }
     LocalDate today = LocalDate.now();
     if (form.getOpeningDate() != null && today.isBefore(form.getOpeningDate())) {
       throw new IllegalStateException(
