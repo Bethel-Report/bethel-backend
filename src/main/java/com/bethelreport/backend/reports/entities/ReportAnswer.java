@@ -1,8 +1,10 @@
 package com.bethelreport.backend.reports.entities;
 
+import com.bethelreport.backend.audit.AuditContextEntityListener;
 import com.bethelreport.backend.forms.entities.FormField;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -16,6 +18,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
+@EntityListeners(AuditContextEntityListener.class)
 @Table(name = "report_answers")
 @Getter
 @Setter

@@ -18,6 +18,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
@@ -52,6 +53,11 @@ class TransactionRepositoryTest {
   private UserRepository users;
   @Autowired
   private EntityManager entityManager;
+
+  @BeforeEach
+  void seedAuditSystemActor() {
+    AuditTestFixtures.ensureSystemActor(users);
+  }
 
   @Test
   void persistsFiltersUpdatesAndDeletesWithBethelIsolation() {

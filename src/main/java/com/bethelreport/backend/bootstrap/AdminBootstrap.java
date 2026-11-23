@@ -55,8 +55,8 @@ public class AdminBootstrap implements ApplicationRunner {
           "O administrador está vinculado a outra identidade Keycloak.");
     }
     user.setKeycloakUserId(identityId);
+    User saved = users.saveAndFlush(user);
     createBaseBethelIfMissing();
-    User saved = users.save(user);
     if (!permissions.existsByUserId(saved.getId())) {
       Permission permission = new Permission();
       permission.setUser(saved);

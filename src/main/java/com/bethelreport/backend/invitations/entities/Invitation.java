@@ -1,9 +1,11 @@
 package com.bethelreport.backend.invitations.entities;
 
+import com.bethelreport.backend.audit.AuditContextEntityListener;
 import com.bethelreport.backend.bethel.entities.Bethel;
 import com.bethelreport.backend.permissions.entities.Role;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
@@ -18,6 +20,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity
+@EntityListeners(AuditContextEntityListener.class)
 @Table(name = "invitations")
 @Data
 @NoArgsConstructor

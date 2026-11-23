@@ -77,7 +77,7 @@ public class UserController {
     return ResponseEntity.ok(userService.deactivateUser(id, authentication));
   }
 
-  @DeleteMapping("me/delete")
+  @DeleteMapping("/me/delete")
   public ResponseEntity<Void> deleteOwnAccount(Authentication authentication) {
     userService.deleteOwnAccount(authentication);
 

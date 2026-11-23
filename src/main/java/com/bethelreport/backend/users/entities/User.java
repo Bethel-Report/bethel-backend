@@ -1,7 +1,9 @@
 package com.bethelreport.backend.users.entities;
 
+import com.bethelreport.backend.audit.AuditContextEntityListener;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -14,6 +16,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity
+@EntityListeners(AuditContextEntityListener.class)
 @Table(name = "users")
 @Data
 @NoArgsConstructor

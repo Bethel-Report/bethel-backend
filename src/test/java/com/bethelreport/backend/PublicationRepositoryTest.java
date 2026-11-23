@@ -32,6 +32,7 @@ import java.util.Set;
 import java.util.UUID;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
@@ -73,6 +74,11 @@ class PublicationRepositoryTest {
   private UserRepository userRepository;
   @Autowired
   private BethelRepository bethelRepository;
+
+  @BeforeEach
+  void seedAuditSystemActor() {
+    AuditTestFixtures.ensureSystemActor(userRepository);
+  }
 
   @Test
   @Transactional
