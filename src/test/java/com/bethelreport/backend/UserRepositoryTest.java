@@ -114,6 +114,58 @@ class UserRepositoryTest {
     }
   }
 
+  @Test
+  @Transactional
+  void auditCapturesReportAndAnswerChangesIncludingCascadeDelete() {
+    Long actorId = userRepository.findByEmailIgnoreCase("admin@bethelreport.local")
+        .orElseThrow().getId();
+    jdbcTemplate.queryForObject(
+        "SELECT set_config('app.audit_user_id', ?, true), "
+            + "set_config('app.audit_user_email', ?, true), "
+            + "set_config('app.audit_is_system', 'false', true)",
+        (resultSet, rowNumber) -> Boolean.TRUE, actorId.toString(), "admin@bethelreport.local");
+
+    Long bethelId = jdbcTemplate.queryForObject(
+        "INSERT INTO bethels (number, name, city, address, email, sponsoring_lodge, "
+            + "foundation_date, active) VALUES (991, 'Audit Bethel', 'Fortaleza', 'Rua teste', "
+            + "'audit-bethel@example.com', 'Loja teste', CURRENT_DATE, true) RETURNING id",
+        Long.class);
+    Long formId = jdbcTemplate.queryForObject(
+        "INSERT INTO forms (name, reference_year, status, created_at) "
+            + "VALUES ('Audit Form', 2026, 'DRAFT', CURRENT_TIMESTAMP) RETURNING id",
+        Long.class);
+    Long fieldId = jdbcTemplate.queryForObject(
+        "INSERT INTO form_fields (form_id, label, type, required, display_order) "
+            + "VALUES (?, 'Answer', 'TEXT', false, 1) RETURNING id",
+        Long.class, formId);
+    Long reportId = jdbcTemplate.queryForObject(
+        "INSERT INTO reports (bethel_id, form_id, status, created_at) "
+            + "VALUES (?, ?, 'DRAFT', CURRENT_TIMESTAMP) RETURNING id",
+        Long.class, bethelId, formId);
+    Long answerId = jdbcTemplate.queryForObject(
+        "INSERT INTO report_answers (report_id, field_id, value, updated_at) "
+            + "VALUES (?, ?, 'initial answer', CURRENT_TIMESTAMP) RETURNING id",
+        Long.class, reportId, fieldId);
+
+    jdbcTemplate.update("UPDATE report_answers SET value = 'updated answer' WHERE id = ?",
+        answerId);
+    jdbcTemplate.update("UPDATE reports SET status = 'SUBMITTED' WHERE id = ?", reportId);
+    jdbcTemplate.update("DELETE FROM reports WHERE id = ?", reportId);
+
+    assertEquals(3, jdbcTemplate.queryForObject(
+        "SELECT count(*) FROM audit_log WHERE table_name = 'reports' AND record_id = ? "
+            + "AND actor_id = ? AND NOT is_system",
+        Integer.class, reportId, actorId));
+    assertEquals(3, jdbcTemplate.queryForObject(
+        "SELECT count(*) FROM audit_log WHERE table_name = 'report_answers' AND record_id = ? "
+            + "AND actor_id = ? AND NOT is_system",
+        Integer.class, answerId, actorId));
+    assertEquals("updated answer", jdbcTemplate.queryForObject(
+        "SELECT old_values ->> 'value' FROM audit_log WHERE table_name = 'report_answers' "
+            + "AND record_id = ? AND operation = 'DELETE'",
+        String.class, answerId));
+  }
+
   private void createPermission(User user, Bethel bethel, Role role) {
     Permission permission = new Permission();
     permission.setUser(user);
