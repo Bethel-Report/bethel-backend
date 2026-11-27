@@ -117,6 +117,17 @@ class AuthorizationServiceTest {
     assertFalse(
         authorizationService.canAssignRole(inactiveUser, Role.MEMBRO_ATIVO, COUNCIL_BETHEL_ID));
     assertFalse(authorizationService.canManageUsers(inactiveUser));
+    assertFalse(authorizationService.hasActivePermission(inactiveUser));
+  }
+
+  @Test
+  void activePermissionIsDetected() {
+    assertTrue(authorizationService.hasActivePermission(council));
+  }
+
+  @Test
+  void missingPermissionIsNotDetectedAsActive() {
+    assertFalse(authorizationService.hasActivePermission(authentication("unassigned@example.com")));
   }
 
   @Test

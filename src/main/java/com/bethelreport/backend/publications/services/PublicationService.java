@@ -1,5 +1,6 @@
 package com.bethelreport.backend.publications.services;
 
+import com.bethelreport.backend.notifications.services.NotificationService;
 import com.bethelreport.backend.permissions.entities.Permission;
 import com.bethelreport.backend.permissions.entities.Role;
 import com.bethelreport.backend.publications.dtos.PublicationRequest;
@@ -10,6 +11,7 @@ import com.bethelreport.backend.publications.mappers.PublicationMapper;
 import com.bethelreport.backend.publications.repositories.PublicationRepository;
 import jakarta.persistence.EntityNotFoundException;
 import java.time.LocalDateTime;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -24,6 +26,7 @@ public class PublicationService {
   private final PublicationRules rules;
   private final PublicationAccess access;
   private final PublicationMapper mapper;
+  private NotificationService notificationService;
 
   public PublicationService(PublicationRepository publicationRepository, PublicationRules rules,
       PublicationAccess access, PublicationMapper mapper) {
@@ -31,6 +34,11 @@ public class PublicationService {
     this.rules = rules;
     this.access = access;
     this.mapper = mapper;
+  }
+
+  @Autowired(required = false)
+  public void setNotificationService(NotificationService notificationService) {
+    this.notificationService = notificationService;
   }
 
   @Transactional
@@ -41,7 +49,11 @@ public class PublicationService {
     publication.setAuthor(actor.getUser());
     publication.setCreatedAt(LocalDateTime.now());
     rules.apply(publication, request, actor);
-    return mapper.toResponse(publicationRepository.save(publication));
+    Publication saved = publicationRepository.save(publication);
+    if (notificationService != null) {
+      notificationService.notifyPublication(saved);
+    }
+    return mapper.toResponse(saved);
   }
 
   public Page<PublicationResponse> list(int page, int size, Sort.Direction order, Long bethelFilter,

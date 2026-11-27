@@ -30,6 +30,10 @@ public class AuthorizationService {
     return Arrays.stream(expectedRoles).anyMatch(role -> role == permission.getRole());
   }
 
+  public boolean hasActivePermission(Authentication authentication) {
+    return findPermission(authentication) != null;
+  }
+
   public boolean isGrandeConselho(Authentication authentication) {
 
     return hasRole(authentication, Role.GRANDE_CONSELHO);
