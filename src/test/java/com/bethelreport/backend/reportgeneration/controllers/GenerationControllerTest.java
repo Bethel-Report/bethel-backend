@@ -167,10 +167,9 @@ class GenerationControllerTest {
     entity.setStorageKey("reports/10/1.xlsx");
     when(storage.download("reports/10/1.xlsx")).thenReturn("xlsx-content".getBytes());
     mvc.perform(asCouncil(get(URL + "/1/download"))).andExpect(status().isOk())
-        .andExpect(
-            header().string("Content-Disposition", "attachment; filename=\"report-1.xlsx\""))
-        .andExpect(content().contentType(
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+        .andExpect(header().string("Content-Disposition", "attachment; filename=\"report-1.xlsx\""))
+        .andExpect(content()
+            .contentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
   }
 
   @Test

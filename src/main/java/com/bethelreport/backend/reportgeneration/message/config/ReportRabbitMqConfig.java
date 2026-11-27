@@ -12,14 +12,12 @@ import org.springframework.context.annotation.Configuration;
 public class ReportRabbitMqConfig {
 
   @Bean
-  DirectExchange reportExchange(
-      @Value("${app.messaging.report.exchange}") String exchangeName) {
+  DirectExchange reportExchange(@Value("${app.messaging.report.exchange}") String exchangeName) {
     return new DirectExchange(exchangeName, true, false);
   }
 
   @Bean
-  Queue reportGenerateQueue(
-      @Value("${app.messaging.report.queue}") String queueName) {
+  Queue reportGenerateQueue(@Value("${app.messaging.report.queue}") String queueName) {
     return new Queue(queueName, true);
   }
 
@@ -30,8 +28,7 @@ public class ReportRabbitMqConfig {
   }
 
   @Bean
-  Queue reportResultQueue(
-      @Value("${app.messaging.report.result-queue}") String queueName) {
+  Queue reportResultQueue(@Value("${app.messaging.report.result-queue}") String queueName) {
     return new Queue(queueName, true);
   }
 

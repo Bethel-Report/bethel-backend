@@ -56,8 +56,8 @@ public class GenerationController {
     GenerationService.DownloadResult result = service.download(bethelId, id, authentication);
     String extension = result.format() == GenerationFormat.XLSX ? "xlsx" : "pdf";
     MediaType mediaType = result.format() == GenerationFormat.XLSX
-        ? MediaType.parseMediaType(
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        ? MediaType
+            .parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         : MediaType.APPLICATION_PDF;
     return ResponseEntity.ok()
         .header(HttpHeaders.CONTENT_DISPOSITION,

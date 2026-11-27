@@ -31,8 +31,8 @@ import org.springframework.validation.annotation.Validated;
 @Transactional(readOnly = true)
 public class GenerationService {
 
-  public record DownloadResult(byte[] content, GenerationFormat format) {}
-
+  public record DownloadResult(byte[] content, GenerationFormat format) {
+  }
 
   private final GenerationRequestRepository repository;
   private final BethelRepository bethels;
