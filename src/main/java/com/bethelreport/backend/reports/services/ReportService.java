@@ -6,6 +6,7 @@ import com.bethelreport.backend.forms.entities.Form;
 import com.bethelreport.backend.forms.entities.FormField;
 import com.bethelreport.backend.forms.entities.FormStatus;
 import com.bethelreport.backend.forms.repositories.FormRepository;
+import com.bethelreport.backend.notifications.services.NotificationService;
 import com.bethelreport.backend.permissions.services.AuthorizationService;
 import com.bethelreport.backend.reports.dtos.CreateReportRequest;
 import com.bethelreport.backend.reports.dtos.ReopenReportRequest;
@@ -24,6 +25,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -37,6 +39,7 @@ public class ReportService {
   private final BethelRepository bethelRepository;
   private final ReportMapper reportMapper;
   private final AuthorizationService authorizationService;
+  private NotificationService notificationService;
 
   public ReportService(ReportRepository reportRepository, FormRepository formRepository,
       BethelRepository bethelRepository, ReportMapper reportMapper,
@@ -46,6 +49,11 @@ public class ReportService {
     this.bethelRepository = bethelRepository;
     this.reportMapper = reportMapper;
     this.authorizationService = authorizationService;
+  }
+
+  @Autowired(required = false)
+  public void setNotificationService(NotificationService notificationService) {
+    this.notificationService = notificationService;
   }
 
   public List<ReportResponse> findAll(Authentication authentication) {
@@ -158,7 +166,11 @@ public class ReportService {
     report.setStatus(ReportStatus.SUBMITTED);
     report.setSubmittedAt(LocalDateTime.now());
     report.setUpdatedAt(LocalDateTime.now());
-    return reportMapper.toResponse(reportRepository.save(report));
+    Report submitted = reportRepository.save(report);
+    if (notificationService != null) {
+      notificationService.notifyReportSubmitted(submitted);
+    }
+    return reportMapper.toResponse(submitted);
   }
 
   @Transactional
@@ -175,7 +187,11 @@ public class ReportService {
     report.setReopenedAt(LocalDateTime.now());
     report.setReopenDeadline(request.reopenDeadline());
     report.setUpdatedAt(LocalDateTime.now());
-    return reportMapper.toResponse(reportRepository.save(report));
+    Report reopened = reportRepository.save(report);
+    if (notificationService != null) {
+      notificationService.notifyReportReopened(reopened);
+    }
+    return reportMapper.toResponse(reopened);
   }
 
   private Report findOrThrow(Long id) {

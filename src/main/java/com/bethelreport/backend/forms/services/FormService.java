@@ -11,11 +11,13 @@ import com.bethelreport.backend.forms.entities.FormFieldType;
 import com.bethelreport.backend.forms.entities.FormStatus;
 import com.bethelreport.backend.forms.mappers.FormMapper;
 import com.bethelreport.backend.forms.repositories.FormRepository;
+import com.bethelreport.backend.notifications.services.NotificationService;
 import jakarta.persistence.EntityNotFoundException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,10 +26,16 @@ import org.springframework.transaction.annotation.Transactional;
 public class FormService {
   private final FormRepository formRepository;
   private final FormMapper formMapper;
+  private NotificationService notificationService;
 
   public FormService(FormRepository formRepository, FormMapper formMapper) {
     this.formRepository = formRepository;
     this.formMapper = formMapper;
+  }
+
+  @Autowired(required = false)
+  public void setNotificationService(NotificationService notificationService) {
+    this.notificationService = notificationService;
   }
 
   public List<FormResponse> findAll() {
@@ -82,7 +90,11 @@ public class FormService {
 
     form.setStatus(FormStatus.PUBLISHED);
     form.setUpdatedAt(LocalDateTime.now());
-    return formMapper.toResponse(formRepository.save(form));
+    Form published = formRepository.save(form);
+    if (notificationService != null) {
+      notificationService.notifyFormPublished(published);
+    }
+    return formMapper.toResponse(published);
   }
 
   @Transactional
