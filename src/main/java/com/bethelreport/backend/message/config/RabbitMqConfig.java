@@ -2,13 +2,14 @@ package com.bethelreport.backend.message.config;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.amqp.support.converter.DefaultJacksonJavaTypeMapper;
+import org.springframework.amqp.support.converter.JacksonJavaTypeMapper;
 import org.springframework.amqp.support.converter.JacksonJsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.boot.amqp.autoconfigure.RabbitTemplateCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-/** Client-side RabbitMQ settings. Broker topology is provisioned by message-broker. */
 @Configuration
 public class RabbitMqConfig {
 
@@ -16,7 +17,11 @@ public class RabbitMqConfig {
 
   @Bean
   MessageConverter jacksonMessageConverter() {
-    return new JacksonJsonMessageConverter();
+    JacksonJsonMessageConverter converter = new JacksonJsonMessageConverter();
+    DefaultJacksonJavaTypeMapper typeMapper = new DefaultJacksonJavaTypeMapper();
+    typeMapper.setTypePrecedence(JacksonJavaTypeMapper.TypePrecedence.INFERRED);
+    converter.setJavaTypeMapper(typeMapper);
+    return converter;
   }
 
   @Bean
