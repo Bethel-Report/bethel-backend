@@ -20,6 +20,7 @@ import com.bethelreport.backend.permissions.entities.Permission;
 import com.bethelreport.backend.permissions.entities.Role;
 import com.bethelreport.backend.permissions.repositories.PermissionRepository;
 import com.bethelreport.backend.permissions.services.AuthorizationService;
+import com.bethelreport.backend.reportgeneration.entities.GenerationFormat;
 import com.bethelreport.backend.reportgeneration.entities.GenerationRequest;
 import com.bethelreport.backend.reportgeneration.entities.GenerationStatus;
 import com.bethelreport.backend.reportgeneration.entities.GenerationType;
@@ -58,7 +59,7 @@ class GenerationControllerTest {
 
   private static final String URL = "/api/bethels/10/report-generations";
   private static final String BODY = """
-      {"type":"FINANCEIRO","periodStart":"2026-01-01","periodEnd":"2026-06-30"}
+      {"type":"FINANCEIRO","format":"PDF","periodStart":"2026-01-01","periodEnd":"2026-06-30"}
       """;
 
   @Autowired
@@ -103,6 +104,7 @@ class GenerationControllerTest {
     entity.setBethel(bethel);
     entity.setRequester(user);
     entity.setGenerationType(GenerationType.FINANCEIRO);
+    entity.setFormat(GenerationFormat.PDF);
     entity.setStatus(GenerationStatus.PENDING);
     entity.setPeriodStart(LocalDate.of(2026, 1, 1));
     entity.setPeriodEnd(LocalDate.of(2026, 6, 30));
@@ -126,6 +128,7 @@ class GenerationControllerTest {
         .andExpect(status().isCreated()).andExpect(jsonPath("$.id").value(1))
         .andExpect(jsonPath("$.bethelId").value(10)).andExpect(jsonPath("$.requesterId").value(7))
         .andExpect(jsonPath("$.type").value("FINANCEIRO"))
+        .andExpect(jsonPath("$.format").value("PDF"))
         .andExpect(jsonPath("$.status").value("PENDING"))
         .andExpect(jsonPath("$.periodStart").value("2026-01-01"))
         .andExpect(jsonPath("$.periodEnd").value("2026-06-30"));
@@ -155,6 +158,19 @@ class GenerationControllerTest {
     mvc.perform(asCouncil(get(URL + "/1/download"))).andExpect(status().isOk())
         .andExpect(header().string("Content-Disposition", "attachment; filename=\"report-1.pdf\""))
         .andExpect(content().contentType(MediaType.APPLICATION_PDF));
+  }
+
+  @Test
+  void downloadsCompletedXlsxGeneration() throws Exception {
+    entity.setStatus(GenerationStatus.COMPLETED);
+    entity.setFormat(GenerationFormat.XLSX);
+    entity.setStorageKey("reports/10/1.xlsx");
+    when(storage.download("reports/10/1.xlsx")).thenReturn("xlsx-content".getBytes());
+    mvc.perform(asCouncil(get(URL + "/1/download"))).andExpect(status().isOk())
+        .andExpect(
+            header().string("Content-Disposition", "attachment; filename=\"report-1.xlsx\""))
+        .andExpect(content().contentType(
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
   }
 
   @Test

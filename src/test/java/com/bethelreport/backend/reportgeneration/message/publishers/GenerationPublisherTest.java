@@ -6,6 +6,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
+import com.bethelreport.backend.reportgeneration.entities.GenerationFormat;
 import com.bethelreport.backend.reportgeneration.entities.GenerationType;
 import com.bethelreport.backend.reportgeneration.message.dtos.GenerationMessage;
 import java.time.LocalDate;
@@ -22,7 +23,7 @@ class GenerationPublisherTest {
   @Test
   void publishesGenerationMessageAndWaitsForBrokerConfirm() {
     GenerationMessage message = new GenerationMessage(1L, 10L, GenerationType.FINANCEIRO,
-        LocalDate.of(2026, 1, 1), LocalDate.of(2026, 6, 30));
+        GenerationFormat.PDF, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 6, 30));
     doAnswer(invocation -> {
       CorrelationData correlation = invocation.getArgument(3);
       correlation.getFuture().complete(new CorrelationData.Confirm(true, ""));
