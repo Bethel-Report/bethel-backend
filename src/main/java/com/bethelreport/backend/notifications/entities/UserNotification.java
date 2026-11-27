@@ -10,15 +10,13 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDateTime;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "user_notifications", uniqueConstraints = @UniqueConstraint(
-    name = "uq_user_notifications_user_notification", columnNames = {"user_id", "notification_id"}))
+@Table(name = "user_notifications")
 @Getter
 @Setter
 @NoArgsConstructor

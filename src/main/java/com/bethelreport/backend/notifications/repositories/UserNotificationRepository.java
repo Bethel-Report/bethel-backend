@@ -22,5 +22,7 @@ public interface UserNotificationRepository extends JpaRepository<UserNotificati
       """)
   Optional<UserNotification> findOwnedById(@Param("id") Long id, @Param("email") String email);
 
-  long countByUser_EmailAndSeenFalse(String email);
+  @Query("SELECT COUNT(un) FROM UserNotification un "
+      + "WHERE un.user.email = :email AND un.seen = false")
+  long countUnreadByUserEmail(@Param("email") String email);
 }

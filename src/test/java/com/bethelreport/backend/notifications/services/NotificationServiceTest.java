@@ -17,6 +17,7 @@ import com.bethelreport.backend.notifications.entities.UserNotification;
 import com.bethelreport.backend.notifications.mappers.NotificationMapper;
 import com.bethelreport.backend.notifications.repositories.NotificationRepository;
 import com.bethelreport.backend.notifications.repositories.UserNotificationRepository;
+import com.bethelreport.backend.permissions.services.AuthorizationService;
 import com.bethelreport.backend.users.entities.User;
 import jakarta.persistence.EntityManager;
 import java.time.LocalDateTime;
@@ -42,21 +43,24 @@ class NotificationServiceTest {
   private UserNotificationRepository userNotificationRepository;
   @Mock
   private EntityManager entityManager;
+  @Mock
+  private AuthorizationService authorizationService;
 
   private NotificationService service;
 
   @BeforeEach
   void setUp() {
     service = new NotificationService(notificationRepository, userNotificationRepository,
-        Mappers.getMapper(NotificationMapper.class), entityManager);
+        Mappers.getMapper(NotificationMapper.class), entityManager, authorizationService);
   }
 
   @Test
   void listsOnlyAssociationsForAuthenticatedUserWithPagination() {
+    allowActivePermission();
     UserNotification association = association(1L, "member@example.test", false);
     when(userNotificationRepository.findPageByUserEmail(
-        org.mockito.ArgumentMatchers.eq("member@example.test"),
-        org.mockito.ArgumentMatchers.any())).thenReturn(new PageImpl<>(List.of(association)));
+        org.mockito.ArgumentMatchers.eq("member@example.test"), org.mockito.ArgumentMatchers.any()))
+        .thenReturn(new PageImpl<>(List.of(association)));
 
     var page = service.list(authentication("member@example.test"), 0, 10);
 
@@ -68,6 +72,7 @@ class NotificationServiceTest {
 
   @Test
   void marksOwnedNotificationAsRead() {
+    allowActivePermission();
     UserNotification association = association(4L, "member@example.test", false);
     when(userNotificationRepository.findOwnedById(4L, "member@example.test"))
         .thenReturn(Optional.of(association));
@@ -81,6 +86,7 @@ class NotificationServiceTest {
 
   @Test
   void rejectsReadingNotificationOwnedByAnotherUser() {
+    allowActivePermission();
     when(userNotificationRepository.findOwnedById(9L, "member@example.test"))
         .thenReturn(Optional.empty());
     when(userNotificationRepository.existsById(9L)).thenReturn(true);
@@ -91,10 +97,20 @@ class NotificationServiceTest {
 
   @Test
   void countsUnreadNotificationsForAuthenticatedUser() {
-    when(userNotificationRepository.countByUser_EmailAndSeenFalse("member@example.test"))
-        .thenReturn(3L);
+    allowActivePermission();
+    when(userNotificationRepository.countUnreadByUserEmail("member@example.test")).thenReturn(3L);
 
     assertEquals(3L, service.countUnread(authentication("member@example.test")));
+  }
+
+  @Test
+  void rejectsNotificationAccessWhenPermissionIsInactive() {
+    when(authorizationService.hasActivePermission(any())).thenReturn(false);
+
+    assertThrows(AccessDeniedException.class,
+        () -> service.list(authentication("inactive@example.test"), 0, 10));
+    verify(userNotificationRepository, org.mockito.Mockito.never()).findPageByUserEmail(any(),
+        any());
   }
 
   @Test
@@ -146,10 +162,11 @@ class NotificationServiceTest {
   }
 
   private JwtAuthenticationToken authentication(String email) {
-    Jwt jwt = Jwt.withTokenValue("token")
-        .header("alg", "none")
-        .claim("email", email)
-        .build();
+    Jwt jwt = Jwt.withTokenValue("token").header("alg", "none").claim("email", email).build();
     return new JwtAuthenticationToken(jwt);
+  }
+
+  private void allowActivePermission() {
+    when(authorizationService.hasActivePermission(any())).thenReturn(true);
   }
 }

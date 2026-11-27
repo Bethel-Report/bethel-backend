@@ -7,6 +7,7 @@ import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
 
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.ERROR)
+@FunctionalInterface
 public interface NotificationMapper {
   @Mapping(target = "id", source = "notification.id")
   @Mapping(target = "title", source = "notification.title")

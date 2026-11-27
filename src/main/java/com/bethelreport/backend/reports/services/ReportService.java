@@ -33,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional(readOnly = true)
+@SuppressWarnings("PMD.CouplingBetweenObjects")
 public class ReportService {
   private final ReportRepository reportRepository;
   private final FormRepository formRepository;

@@ -9,6 +9,7 @@ import com.bethelreport.backend.notifications.entities.UserNotification;
 import com.bethelreport.backend.notifications.mappers.NotificationMapper;
 import com.bethelreport.backend.notifications.repositories.NotificationRepository;
 import com.bethelreport.backend.notifications.repositories.UserNotificationRepository;
+import com.bethelreport.backend.permissions.services.AuthorizationService;
 import com.bethelreport.backend.publications.entities.Publication;
 import com.bethelreport.backend.reports.entities.Report;
 import com.bethelreport.backend.users.entities.User;
@@ -31,14 +32,16 @@ public class NotificationService {
   private final UserNotificationRepository userNotificationRepository;
   private final NotificationMapper mapper;
   private final EntityManager entityManager;
+  private final AuthorizationService authorizationService;
 
   public NotificationService(NotificationRepository notificationRepository,
       UserNotificationRepository userNotificationRepository, NotificationMapper mapper,
-      EntityManager entityManager) {
+      EntityManager entityManager, AuthorizationService authorizationService) {
     this.notificationRepository = notificationRepository;
     this.userNotificationRepository = userNotificationRepository;
     this.mapper = mapper;
     this.entityManager = entityManager;
+    this.authorizationService = authorizationService;
   }
 
   public Page<NotificationResponse> list(Authentication authentication, int page, int size) {
@@ -68,8 +71,7 @@ public class NotificationService {
   }
 
   public long countUnread(Authentication authentication) {
-    return userNotificationRepository.countByUser_EmailAndSeenFalse(
-        authenticatedEmail(authentication));
+    return userNotificationRepository.countUnreadByUserEmail(authenticatedEmail(authentication));
   }
 
   @Transactional
@@ -77,8 +79,8 @@ public class NotificationService {
     List<Long> recipientIds = notificationRepository
         .findPublicationRecipientIds(publication.getId());
     createForUsers("Nova publicação: " + publication.getTitle(),
-        "Uma nova publicação está disponível.", NotificationType.PUBLICATION,
-        publication.getId(), publication.getBethel(), recipientIds);
+        "Uma nova publicação está disponível.", NotificationType.PUBLICATION, publication.getId(),
+        publication.getBethel(), recipientIds);
   }
 
   @Transactional
@@ -151,6 +153,9 @@ public class NotificationService {
     String email = jwt.getToken().getClaimAsString("email");
     if (email == null || email.isBlank()) {
       throw new AccessDeniedException("Usuário não identificado.");
+    }
+    if (!authorizationService.hasActivePermission(authentication)) {
+      throw new AccessDeniedException("Permissão ativa não encontrada.");
     }
     return email;
   }
