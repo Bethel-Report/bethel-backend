@@ -31,9 +31,6 @@ import org.springframework.validation.annotation.Validated;
 @Transactional(readOnly = true)
 public class GenerationService {
 
-  public record DownloadResult(byte[] content, GenerationFormat format) {
-  }
-
   private final GenerationRequestRepository repository;
   private final BethelRepository bethels;
   private final UserRepository users;
@@ -41,6 +38,9 @@ public class GenerationService {
   private final GenerationMapper mapper;
   private final GenerationPublisher publisher;
   private final MinioStorage storage;
+
+  public record DownloadResult(byte[] content, GenerationFormat format) {
+  }
 
   public GenerationService(GenerationRequestRepository repository, BethelRepository bethels,
       UserRepository users, AuthorizationService authorization, GenerationMapper mapper,
