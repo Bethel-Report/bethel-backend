@@ -3,6 +3,7 @@ CREATE TABLE report_generation_requests (
     bethel_id BIGINT NOT NULL REFERENCES bethels(id),
     requester_id BIGINT NOT NULL REFERENCES users(id),
     type VARCHAR(20) NOT NULL CHECK (type IN ('FINANCEIRO', 'MEMBROS', 'PUBLICACOES')),
+    format VARCHAR(10) NOT NULL DEFAULT 'PDF' CHECK (format IN ('PDF', 'XLSX')),
     status VARCHAR(20) NOT NULL CHECK (status IN ('PENDING', 'PROCESSING', 'COMPLETED', 'FAILED')),
     period_start DATE NOT NULL,
     period_end DATE NOT NULL,

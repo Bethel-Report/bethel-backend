@@ -5,6 +5,7 @@ import com.bethelreport.backend.permissions.services.AuthorizationService;
 import com.bethelreport.backend.reportgeneration.dtos.CreateGenerationRequest;
 import com.bethelreport.backend.reportgeneration.dtos.GenerationPage;
 import com.bethelreport.backend.reportgeneration.dtos.GenerationResponse;
+import com.bethelreport.backend.reportgeneration.entities.GenerationFormat;
 import com.bethelreport.backend.reportgeneration.entities.GenerationRequest;
 import com.bethelreport.backend.reportgeneration.entities.GenerationStatus;
 import com.bethelreport.backend.reportgeneration.mappers.GenerationMapper;
@@ -29,6 +30,9 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 @Transactional(readOnly = true)
 public class GenerationService {
+
+  public record DownloadResult(byte[] content, GenerationFormat format) {}
+
 
   private final GenerationRequestRepository repository;
   private final BethelRepository bethels;
@@ -68,6 +72,7 @@ public class GenerationService {
         .orElseThrow(() -> new AccessDeniedException("Usuário não encontrado.")));
 
     entity.setGenerationType(request.type());
+    entity.setFormat(request.format() != null ? request.format() : GenerationFormat.PDF);
     entity.setStatus(GenerationStatus.PENDING);
     entity.setPeriodStart(request.periodStart());
     entity.setPeriodEnd(request.periodEnd());
@@ -77,7 +82,7 @@ public class GenerationService {
     GenerationRequest saved = repository.save(entity);
 
     publisher.publish(new GenerationMessage(saved.getId(), bethelId, saved.getGenerationType(),
-        saved.getPeriodStart(), saved.getPeriodEnd()));
+        saved.getFormat(), saved.getPeriodStart(), saved.getPeriodEnd()));
 
     return mapper.toResponse(saved);
   }
@@ -97,13 +102,13 @@ public class GenerationService {
         PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"))));
   }
 
-  public byte[] download(Long bethelId, Long id, Authentication authentication) {
+  public DownloadResult download(Long bethelId, Long id, Authentication authentication) {
     requireAccess(bethelId, authentication);
     GenerationRequest entity = find(bethelId, id);
     if (entity.getStatus() != GenerationStatus.COMPLETED || entity.getStorageKey() == null) {
       throw new IllegalStateException("Relatório ainda não está disponível para download.");
     }
-    return storage.download(entity.getStorageKey());
+    return new DownloadResult(storage.download(entity.getStorageKey()), entity.getFormat());
   }
 
   @Transactional

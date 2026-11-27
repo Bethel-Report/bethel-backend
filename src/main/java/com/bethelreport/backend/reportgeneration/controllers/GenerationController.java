@@ -3,6 +3,7 @@ package com.bethelreport.backend.reportgeneration.controllers;
 import com.bethelreport.backend.reportgeneration.dtos.CreateGenerationRequest;
 import com.bethelreport.backend.reportgeneration.dtos.GenerationPage;
 import com.bethelreport.backend.reportgeneration.dtos.GenerationResponse;
+import com.bethelreport.backend.reportgeneration.entities.GenerationFormat;
 import com.bethelreport.backend.reportgeneration.services.GenerationService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
@@ -52,9 +53,15 @@ public class GenerationController {
   @GetMapping("/{id}/download")
   public ResponseEntity<byte[]> download(@PathVariable Long bethelId, @PathVariable Long id,
       Authentication authentication) {
-    byte[] content = service.download(bethelId, id, authentication);
+    GenerationService.DownloadResult result = service.download(bethelId, id, authentication);
+    String extension = result.format() == GenerationFormat.XLSX ? "xlsx" : "pdf";
+    MediaType mediaType = result.format() == GenerationFormat.XLSX
+        ? MediaType.parseMediaType(
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        : MediaType.APPLICATION_PDF;
     return ResponseEntity.ok()
-        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"report-" + id + ".pdf\"")
-        .contentType(MediaType.APPLICATION_PDF).body(content);
+        .header(HttpHeaders.CONTENT_DISPOSITION,
+            "attachment; filename=\"report-" + id + "." + extension + "\"")
+        .contentType(mediaType).body(result.content());
   }
 }

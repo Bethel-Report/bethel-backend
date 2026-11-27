@@ -43,6 +43,10 @@ public class GenerationRequest {
   private com.bethelreport.backend.reportgeneration.entities.GenerationType generationType;
 
   @Enumerated(EnumType.STRING)
+  @Column(nullable = false, length = 10)
+  private GenerationFormat format;
+
+  @Enumerated(EnumType.STRING)
   @Column(nullable = false, length = 20)
   private GenerationStatus status;
 
